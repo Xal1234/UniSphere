@@ -1,0 +1,6 @@
+{
+  "name": "CampusOne - BPUT Campus Management Portal",
+  "description": "Unified academic, attendance, leaves, hostel, fees, results, and administrative management portal for BPUT students and staff.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
