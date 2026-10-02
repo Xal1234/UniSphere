@@ -255,9 +255,26 @@ export interface AppNotification {
   title: string;
   description: string;
   time: string;
-  type: 'notice' | 'leave' | 'fee' | 'assignment' | 'event';
+  type: 'notice' | 'leave' | 'fee' | 'assignment' | 'event' | 'attendance';
   read: boolean;
   linkTab?: string;
+  targetRole?: 'student' | 'admin' | 'both';
+  targetUserId?: string;
+}
+
+export interface ClassAttendanceRecord {
+  id: string;
+  courseCode: string;
+  courseName: string;
+  sessionDate: string;
+  sessionPeriod: string;
+  markedBy: string;
+  markedAt: string;
+  lastEditedAt?: string;
+  presentStudentIds: string[];
+  absentStudentIds: string[];
+  totalEnrolled: number;
+  remarks?: string;
 }
 
 export type StaffPersona = 'Dean & Chief Warden' | 'Course Faculty' | 'Hostel Warden' | 'Office Administrator';

@@ -20,12 +20,15 @@ import {
   initialHelpdeskTickets,
   initialStudentDocuments,
   initialNotifications,
+  initialAdminNotifications,
+  initialAttendanceRecords,
   initialFacultyCourses,
   initialStaffTimetable,
   initialStudentDirectory,
   initialStaffLeaves,
 } from './data/mockData';
 import { HorizontalNavbar, navItems } from './components/layout/HorizontalNavbar';
+import { LoginView } from './views/LoginView';
 import { DashboardView } from './views/DashboardView';
 import { AttendanceView } from './views/AttendanceView';
 import { ClassLeaveView } from './views/ClassLeaveView';
@@ -45,12 +48,67 @@ import { AdminAttendanceMarkingView } from './views/admin/AdminAttendanceMarking
 import { AdminAssignmentsGradingView } from './views/admin/AdminAssignmentsGradingView';
 import { AdminStudentsDirectoryView } from './views/admin/AdminStudentsDirectoryView';
 import { AdminStaffProfileView } from './views/admin/AdminStaffProfileView';
-import { Assignment, StaffLeaveRequest, Notice, CampusEvent, ThemePreference, DevicePreference } from './types';
+import {
+  Assignment,
+  StaffLeaveRequest,
+  Notice,
+  CampusEvent,
+  ThemePreference,
+  DevicePreference,
+  ClassAttendanceRecord,
+  AppNotification,
+} from './types';
 
 export default function App() {
+  // Authentication State (Demo accounts: STU001 / Student@123, ADM001 / Admin@123)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('campusone_auth') !== null;
+  });
+
+  const [authenticatedAccountId, setAuthenticatedAccountId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('campusone_auth');
+      if (saved) {
+        return JSON.parse(saved).accountId || 'STU001';
+      }
+    } catch {}
+    return 'STU001';
+  });
+
   // App Navigation and Role State
-  const [userRole, setUserRole] = useState<UserRole>('student');
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem('campusone_auth');
+      if (saved) {
+        return JSON.parse(saved).role || 'student';
+      }
+    } catch {}
+    return 'student';
+  });
+
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('campusone_auth');
+      if (saved && JSON.parse(saved).role === 'admin') {
+        return 'admin-dashboard';
+      }
+    } catch {}
+    return 'dashboard';
+  });
+
+  // Login & Logout Handlers (Enforces credential-based login; no unrestricted toggle)
+  const handleLogin = (role: UserRole, accountId: string) => {
+    setUserRole(role);
+    setAuthenticatedAccountId(accountId);
+    setIsAuthenticated(true);
+    setCurrentTab(role === 'admin' ? 'admin-dashboard' : 'dashboard');
+    localStorage.setItem('campusone_auth', JSON.stringify({ role, accountId }));
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('campusone_auth');
+  };
 
   // Core Data States
   const [student, setStudent] = useState(initialStudentProfile);
@@ -70,7 +128,13 @@ export default function App() {
   const [catalogBooks, setCatalogBooks] = useState(initialCatalogBooks);
   const [helpdeskTickets, setHelpdeskTickets] = useState(initialHelpdeskTickets);
   const [documents, setDocuments] = useState(initialStudentDocuments);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => [
+    ...initialNotifications,
+    ...initialAdminNotifications,
+  ]);
+
+  // Attendance Records State (Stores separate records for different courses, dates, and sessions)
+  const [attendanceRecords, setAttendanceRecords] = useState<ClassAttendanceRecord[]>(initialAttendanceRecords);
 
   // Admin Specific Core Data States
   const [facultyCourses, setFacultyCourses] = useState(initialFacultyCourses);
@@ -293,23 +357,51 @@ export default function App() {
     ]);
   };
 
-  // Admin Class Attendance Session Handler
-  const handleLogClassAttendance = (courseCode: string, studentIdsPresent: string[]) => {
-    setFacultyCourses((prev) =>
-      prev.map((c) =>
-        c.code === courseCode
-          ? {
-              ...c,
-              conductedClasses: c.conductedClasses + 1,
-            }
-          : c
-      )
-    );
+  // Admin Class Attendance Session Handler (with duplicate prevention and correction support)
+  const handleSaveAttendanceRecord = (record: ClassAttendanceRecord, isCorrection: boolean) => {
+    if (isCorrection) {
+      // Update existing record without creating a duplicate
+      setAttendanceRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? record : r))
+      );
+    } else {
+      // New attendance record: append and increment conducted class count
+      setAttendanceRecords((prev) => [record, ...prev]);
+
+      setFacultyCourses((prev) =>
+        prev.map((c) =>
+          c.code === record.courseCode
+            ? {
+                ...c,
+                conductedClasses: c.conductedClasses + 1,
+              }
+            : c
+        )
+      );
+
+      const isCurrentStudentPresent = record.presentStudentIds.includes(student.id);
+      setAttendanceCourses((prev) =>
+        prev.map((c) =>
+          c.code === record.courseCode
+            ? {
+                ...c,
+                conducted: c.conducted + 1,
+                attended: isCurrentStudentPresent ? c.attended + 1 : c.attended,
+                percentage: Math.round(
+                  ((isCurrentStudentPresent ? c.attended + 1 : c.attended) / (c.conducted + 1)) * 1000
+                ) / 10,
+              }
+            : c
+        )
+      );
+    }
+
+    // Update student directory percentages
     setStudentDirectory((prev) =>
       prev.map((s) => {
-        const isPresent = studentIdsPresent.includes(s.id);
+        const isPresent = record.presentStudentIds.includes(s.id);
         const newPct = isPresent
-          ? Math.min(100, Math.round((s.attendancePct * 0.95 + 5) * 10) / 10)
+          ? Math.min(100, Math.round((s.attendancePct * 0.96 + 4) * 10) / 10)
           : Math.max(0, Math.round((s.attendancePct * 0.95) * 10) / 10);
         return {
           ...s,
@@ -318,30 +410,38 @@ export default function App() {
         };
       })
     );
-    setAttendanceCourses((prev) =>
-      prev.map((c) =>
-        c.code === courseCode
-          ? {
-              ...c,
-              conducted: c.conducted + 1,
-              attended: c.attended + 1,
-              percentage: Math.round(((c.attended + 1) / (c.conducted + 1)) * 1000) / 10,
-            }
-          : c
-      )
-    );
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'Attendance Register Updated',
-        description: `Class attendance logged for ${courseCode} (${studentIdsPresent.length} students marked present).`,
-        time: 'Just now',
-        type: 'notice',
-        read: false,
-        linkTab: userRole === 'admin' ? 'admin-attendance' : 'attendance',
-      },
-      ...notifications,
-    ]);
+
+    // NOTIFICATIONS HANDLING - Strictly role-specific:
+    // 1. Admin gets private save confirmation (never shown to student)
+    const adminNotification: AppNotification = {
+      id: `NOTIF-${Date.now()}-ADM`,
+      title: isCorrection ? 'Attendance Record Corrected' : 'Attendance Session Saved',
+      description: `Class attendance for ${record.courseCode} on ${record.sessionDate} (${record.sessionPeriod}) ${
+        isCorrection ? 'updated' : 'recorded'
+      }: ${record.presentStudentIds.length} present, ${record.absentStudentIds.length} absent.`,
+      time: 'Just now',
+      type: 'attendance',
+      read: false,
+      linkTab: 'admin-attendance',
+      targetRole: 'admin',
+    };
+
+    // 2. Student gets individual personal notification (showing only their own status, opening read-only attendance page)
+    const isStudentPresent = record.presentStudentIds.includes(student.id);
+    const studentNotification: AppNotification = {
+      id: `NOTIF-${Date.now()}-STU`,
+      title: 'Class Attendance Logged',
+      description: `You were marked ${isStudentPresent ? 'Present' : 'Absent'} for ${record.courseCode} (${
+        record.sessionPeriod
+      } on ${record.sessionDate}).`,
+      time: 'Just now',
+      type: 'attendance',
+      read: false,
+      linkTab: 'attendance',
+      targetRole: 'student',
+    };
+
+    setNotifications((prev) => [adminNotification, studentNotification, ...prev]);
   };
 
   // Admin Staff Leave Submission Handler (Staff cannot approve own leave)
@@ -609,6 +709,20 @@ export default function App() {
   const pendingLeavesCount = classLeaves.filter((l) => l.status === 'Pending').length;
   const pendingAssignmentsCount = assignments.filter((a) => a.status === 'Pending').length;
 
+  // Filter notifications strictly by recipient role (prevents admin notices from leaking to students)
+  const roleFilteredNotifications = notifications.filter(
+    (n) => !n.targetRole || n.targetRole === 'both' || n.targetRole === userRole
+  );
+
+  // If user is not logged in, show the single sign-on Login page
+  if (!isAuthenticated) {
+    return (
+      <div className={themePreference === 'dark' ? 'dark' : ''}>
+        <LoginView onLogin={handleLogin} />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen transition-colors duration-200 ${
@@ -737,8 +851,9 @@ export default function App() {
             setInitialAssignmentSubmitId(null);
           }}
           userRole={userRole}
-          onToggleRole={handleToggleRole}
-          notifications={notifications}
+          onToggleRole={handleLogout}
+          onLogout={handleLogout}
+          notifications={roleFilteredNotifications}
           onMarkNotificationAsRead={handleMarkNotificationAsRead}
           onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
           student={student}
@@ -795,7 +910,9 @@ export default function App() {
             <AdminAttendanceMarkingView
               courses={facultyCourses}
               students={studentDirectory}
-              onLogClassAttendance={handleLogClassAttendance}
+              attendanceRecords={attendanceRecords}
+              onSaveAttendanceRecord={handleSaveAttendanceRecord}
+              adminName={admin.name}
             />
           )}
 

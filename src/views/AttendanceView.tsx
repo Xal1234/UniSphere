@@ -16,12 +16,10 @@ import { AttendanceCourse } from '../types';
 
 interface AttendanceViewProps {
   courses: AttendanceCourse[];
-  onLogSimulatedClass?: (courseCode: string, attended: boolean) => void;
 }
 
 export const AttendanceView: React.FC<AttendanceViewProps> = ({
   courses,
-  onLogSimulatedClass,
 }) => {
   const [threshold, setThreshold] = useState<number>(75);
   const [selectedSemester, setSelectedSemester] = useState<string>('Sem 6');
@@ -45,8 +43,13 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
       {/* 1. Header & Threshold Controller */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
-          <div className="text-xs font-semibold text-teal-700 tracking-wide uppercase">
-            Attendance Monitoring & BPUT Eligibility
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-teal-700 tracking-wide uppercase">
+              Attendance Monitoring & BPUT Eligibility
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+              Verified Student Record (Read-Only)
+            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
             Course-wise & Aggregate Attendance

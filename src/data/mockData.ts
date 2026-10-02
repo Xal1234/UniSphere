@@ -1025,6 +1025,7 @@ export const initialNotifications: AppNotification[] = [
     type: 'notice',
     read: false,
     linkTab: 'notices',
+    targetRole: 'student',
   },
   {
     id: 'NOTIF-02',
@@ -1034,6 +1035,7 @@ export const initialNotifications: AppNotification[] = [
     type: 'leave',
     read: false,
     linkTab: 'hostel-leave',
+    targetRole: 'student',
   },
   {
     id: 'NOTIF-03',
@@ -1043,6 +1045,7 @@ export const initialNotifications: AppNotification[] = [
     type: 'assignment',
     read: true,
     linkTab: 'assignments',
+    targetRole: 'student',
   },
   {
     id: 'NOTIF-04',
@@ -1052,6 +1055,79 @@ export const initialNotifications: AppNotification[] = [
     type: 'fee',
     read: true,
     linkTab: 'fees',
+    targetRole: 'student',
+  },
+  {
+    id: 'NOTIF-05',
+    title: 'Your Attendance Recorded',
+    description: 'Marked Present for RCS6C001 (Period 1 on 2026-09-30). Course Attendance: 92.5%.',
+    time: '1 day ago',
+    type: 'attendance',
+    read: true,
+    linkTab: 'attendance',
+    targetRole: 'student',
+  },
+];
+
+export const initialAdminNotifications: AppNotification[] = [
+  {
+    id: 'ADM-NOTIF-01',
+    title: 'Pending Student CL Requests',
+    description: '3 Class Leave applications require faculty endorsement.',
+    time: '1 hour ago',
+    type: 'leave',
+    read: false,
+    linkTab: 'admin-cl-approvals',
+    targetRole: 'admin',
+  },
+  {
+    id: 'ADM-NOTIF-02',
+    title: 'DBMS Assignment Submissions',
+    description: '14 new student assignment submissions ready for evaluation & grading.',
+    time: '3 hours ago',
+    type: 'assignment',
+    read: false,
+    linkTab: 'admin-grading',
+    targetRole: 'admin',
+  },
+  {
+    id: 'ADM-NOTIF-03',
+    title: 'Attendance Register Review',
+    description: 'Weekly BPUT biometric aggregate report ready for review.',
+    time: '1 day ago',
+    type: 'attendance',
+    read: true,
+    linkTab: 'admin-attendance',
+    targetRole: 'admin',
+  },
+];
+
+export const initialAttendanceRecords: import('../types').ClassAttendanceRecord[] = [
+  {
+    id: 'RCS6C001_2026-09-28_Period 1 (09:00 AM - 10:00 AM)',
+    courseCode: 'RCS6C001',
+    courseName: 'Database Management Systems',
+    sessionDate: '2026-09-28',
+    sessionPeriod: 'Period 1 (09:00 AM - 10:00 AM)',
+    markedBy: 'Dr. Sudhir Kumar Mohanty (Academic Dean)',
+    markedAt: '2026-09-28 10:05',
+    presentStudentIds: ['STU-01', 'STU-02', 'STU-05', 'STU-06', 'STU-07', 'STU-08'],
+    absentStudentIds: ['STU-03', 'STU-04'],
+    totalEnrolled: 8,
+    remarks: 'Regular lecture session conducted in LH-204.',
+  },
+  {
+    id: 'RCS6C001_2026-09-30_Period 2 (10:05 AM - 11:05 AM)',
+    courseCode: 'RCS6C001',
+    courseName: 'Database Management Systems',
+    sessionDate: '2026-09-30',
+    sessionPeriod: 'Period 2 (10:05 AM - 11:05 AM)',
+    markedBy: 'Dr. Sudhir Kumar Mohanty (Academic Dean)',
+    markedAt: '2026-09-30 11:10',
+    presentStudentIds: ['STU-01', 'STU-02', 'STU-03', 'STU-05', 'STU-06', 'STU-07', 'STU-08'],
+    absentStudentIds: ['STU-04'],
+    totalEnrolled: 8,
+    remarks: 'Relational algebra & SQL query optimization covered.',
   },
 ];
 

@@ -34,6 +34,7 @@ import {
   Tablet,
   Laptop,
   Check,
+  LogOut,
 } from 'lucide-react';
 import { UserRole, AppNotification, StudentProfile, AdminProfile, ThemePreference, DevicePreference } from '../../types';
 
@@ -93,6 +94,7 @@ interface HorizontalNavbarProps {
   onToggleTheme: (theme?: ThemePreference) => void;
   devicePreference: DevicePreference;
   onChangeDevicePreference: (device: DevicePreference) => void;
+  onLogout?: () => void;
 }
 
 export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
@@ -115,6 +117,7 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
   onToggleTheme,
   devicePreference,
   onChangeDevicePreference,
+  onLogout,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -368,26 +371,36 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
               )}
             </button>
 
-            {/* Role Switcher Button */}
-            <button
-              onClick={onToggleRole}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+            {/* Authenticated Account Role Badge (Non-toggleable: Changing accounts requires logging out) */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${
                 userRole === 'admin'
-                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-300 hover:bg-amber-500/25'
-                  : 'bg-teal-500/15 border-teal-500/30 text-teal-300 hover:bg-teal-500/25'
+                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                  : 'bg-teal-500/15 border-teal-500/30 text-teal-300'
               }`}
-              title="Toggle between Student and Administrator mode"
+              title={`Logged in as ${userRole === 'admin' ? 'Administrator (ADM001)' : 'Student (STU001)'}`}
             >
               {userRole === 'admin' ? (
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
               ) : (
-                <User className="w-4 h-4 text-teal-400" />
+                <GraduationCap className="w-4 h-4 text-teal-400" />
               )}
               <span className="hidden sm:inline">
-                {userRole === 'admin' ? 'Admin Mode' : 'Student Mode'}
+                {userRole === 'admin' ? 'Admin · ADM001' : 'Student · STU001'}
               </span>
-              <span className="text-[10px] text-slate-400 font-normal ml-0.5">Swap</span>
-            </button>
+            </div>
+
+            {/* Logout Action */}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-300 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 hover:border-rose-400 transition-all cursor-pointer"
+                title="Log out of current demo account"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            )}
 
             {/* Notification Bell Dropdown */}
             <div className="relative" ref={notifRef}>
@@ -623,16 +636,18 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        onToggleRole();
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100 mt-1 pt-1.5"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                      Switch to {userRole === 'student' ? 'Administrator' : 'Student'} View
-                    </button>
+                    {onLogout && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          onLogout();
+                        }}
+                        className="w-full px-4 py-2 text-left text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 mt-1 pt-2 font-semibold"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                        Log Out (Switch Account)
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -851,14 +866,20 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
             <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-teal-400" />
-                <span className="truncate max-w-[160px]">{userRole === 'student' ? student.name : admin.name}</span>
+                <span className="truncate max-w-[160px]">{userRole === 'student' ? `${student.name} (STU001)` : `${admin.name} (ADM001)`}</span>
               </div>
-              <button
-                onClick={onToggleRole}
-                className="text-xs font-semibold text-teal-300 hover:underline"
-              >
-                Switch Role
-              </button>
+              {onLogout && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              )}
             </div>
           </div>
         </div>
