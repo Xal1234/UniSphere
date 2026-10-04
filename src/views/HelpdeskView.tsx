@@ -13,13 +13,14 @@ import {
   ShieldCheck,
   Check,
 } from 'lucide-react';
-import { HelpdeskTicket, UserRole, StudentProfile } from '../types';
+import { HelpdeskTicket, UserRole, StudentProfile, StudentRecord } from '../types';
 
 interface HelpdeskViewProps {
   tickets: HelpdeskTicket[];
   userRole: UserRole;
   student: StudentProfile;
-  onCreateTicket: (ticket: Omit<HelpdeskTicket, 'id' | 'ticketNo' | 'createdAt' | 'updatedAt' | 'status'>) => void;
+  students: StudentRecord[];
+  onCreateTicket: (ticket: Omit<HelpdeskTicket, 'id' | 'ticketNo' | 'createdAt' | 'updatedAt' | 'status'>) => string | void;
   onUpdateTicketStatus: (id: string, status: HelpdeskTicket['status'], resolution?: string) => void;
 }
 
@@ -27,6 +28,7 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
   tickets,
   userRole,
   student,
+  students,
   onCreateTicket,
   onUpdateTicketStatus,
 }) => {
@@ -41,29 +43,40 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<HelpdeskTicket['priority']>('Medium');
   const [formSuccess, setFormSuccess] = useState(false);
+  const [isAssistedRequest, setIsAssistedRequest] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(students.find((s) => s.regNo === student.regNo)?.id || students[0]?.id || '');
+  const [createdTicketNo, setCreatedTicketNo] = useState('');
+
+  const requestingStudent = userRole === 'admin' && isAssistedRequest
+    ? students.find((s) => s.id === selectedStudentId) || student
+    : student;
 
   const filteredTickets = tickets.filter((t) => {
+    if (userRole === 'student' && t.regNo !== student.regNo) return false;
     if (selectedStatus !== 'All' && t.status !== selectedStatus) return false;
     return true;
   });
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onCreateTicket({
-      studentName: student.name,
-      regNo: student.regNo,
+    const ticketNo = onCreateTicket({
+      studentId: userRole === 'admin' && isAssistedRequest ? requestingStudent.id : student.id,
+      studentName: requestingStudent.name,
+      regNo: requestingStudent.regNo,
       category,
       subject,
       description,
       priority,
     });
+    setCreatedTicketNo(ticketNo || '');
     setFormSuccess(true);
     setTimeout(() => {
       setFormSuccess(false);
       setShowCreateModal(false);
+      setIsAssistedRequest(false);
       setSubject('');
       setDescription('');
-    }, 800);
+    }, 1800);
   };
 
   const handleResolveSubmit = (e: React.FormEvent) => {
@@ -96,14 +109,28 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
 
         {userRole === 'student' && (
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => { setIsAssistedRequest(false); setShowCreateModal(true); }}
             className="px-4 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-xs flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Raise New Service Ticket
           </button>
         )}
+        {userRole === 'admin' && (
+          <button
+            onClick={() => { setIsAssistedRequest(true); setShowCreateModal(true); }}
+            className="px-4 py-2 text-xs font-semibold rounded-lg border border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 transition-colors shadow-xs"
+          >
+            Register Assisted / Walk-in Request
+          </button>
+        )}
       </div>
+
+      {userRole === 'admin' && (
+        <div className="px-4 py-3 rounded-xl border border-blue-100 bg-blue-50 text-xs text-blue-900">
+          <strong>Assisted campus counter:</strong> staff can register and track a request for a student who does not have a smartphone.
+        </div>
+      )}
 
       {/* 2. Filter Tabs */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
@@ -205,13 +232,17 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
 
             {/* Admin actions: resolve ticket */}
             {userRole === 'admin' && t.status !== 'Resolved' && (
-              <div className="shrink-0 self-start">
-                <button
-                  onClick={() => setSelectedTicketToResolve(t)}
-                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  Resolve Ticket
+              <div className="shrink-0 self-start flex flex-col gap-2">
+                {t.status === 'Open' && (
+                  <button
+                    onClick={() => onUpdateTicketStatus(t.id, 'In Progress')}
+                    className="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 transition-colors"
+                  >
+                    Assign to Service Desk
+                  </button>
+                )}
+                <button onClick={() => setSelectedTicketToResolve(t)} className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5" /> Resolve Ticket
                 </button>
               </div>
             )}
@@ -219,17 +250,17 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
         ))}
       </div>
 
-      {/* 4. Student Create Ticket Modal */}
+      {/* 4. Student or staff-assisted ticket intake */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white border border-slate-200 rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[11px] font-mono text-teal-700 font-bold uppercase">
-                  BPUT Campus Maintenance
+                  {isAssistedRequest ? 'Staff-assisted intake · Campus Service Counter' : 'BPUT Campus Maintenance'}
                 </span>
                 <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                  Raise Campus Service Ticket
+                  {isAssistedRequest ? 'Register a Walk-in Service Request' : 'Raise Campus Service Ticket'}
                 </h3>
               </div>
               <button
@@ -241,6 +272,15 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
             </div>
 
             <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
+              {isAssistedRequest && userRole === 'admin' && (
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Student at service counter *</label>
+                  <select required value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800">
+                    {students.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.regNo} · {s.branch}</option>)}
+                  </select>
+                  <p className="mt-1 text-[11px] text-slate-500">Give the student the generated tracking number; they can ask the counter for updates.</p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Issue Category *</label>
@@ -301,7 +341,7 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({
               {formSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-semibold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Ticket dispatched to technical officer. Tracking ID created.
+                  Request registered{createdTicketNo ? ` · Tracking ID ${createdTicketNo}` : ''}. Give this number to the student for follow-up.
                 </div>
               )}
 

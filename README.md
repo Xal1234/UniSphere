@@ -33,10 +33,14 @@ CampusOne (also known as CampusPulse) is a modern, responsive web application en
 * **Circular Publisher**: Draft and broadcast campus-wide official circulars.
 * **Institutional Fees Ledger**: Bursar fee collection summaries, departmental payment clearance, and fee reconciliation tables.
 * **Staff Self-Service**: Personal staff dossier, teaching timetable, and staff casual/duty leave request submission and tracking.
+* **Operations Visibility**: Admin view of open and aging helpdesk requests, repeated issue categories, average resolution time, and student alert reads/actions.
+* **Targeted Notices**: Publish notices to all students, CSE students, hostel residents, or staff; notification lists are scoped by role and student account.
+* **Assisted Service Counter**: Staff can register a walk-in student's helpdesk request and give them its tracking number.
 
 ### 3. Visual & Device Preferences
 * **Theme Preference**: 1-click toggle between Light Academic Mode and refined Dark Mode with high-contrast slate surfaces.
 * **Device Viewport Simulator**: Preview the portal in **Auto Responsive** (fluid 100%), **Desktop Workstation Frame** (1360px), **Tablet Frame** (820px), or **Mobile Smartphone Frame** (420px).
+* **Low-Bandwidth Support**: Screens load on demand and the previously loaded app shell can be reopened offline after a successful visit.
 
 ---
 
@@ -46,7 +50,13 @@ CampusOne (also known as CampusPulse) is a modern, responsive web application en
 * **Build Tool**: Vite 8
 * **Styling**: Tailwind CSS v4 + Plus Jakarta Sans & JetBrains Mono typography
 * **Icons**: Lucide React
-* **State Management**: React Hooks + Local Storage persistence (zero backend or external database required for demo)
+* **State Management**: React Hooks + browser-local demo storage (no backend or external database required for demo)
+
+## Prototype Data and Rollout
+
+This is a working front-end prototype with sample university records. Workflow actions persist in the current browser so a demo can be continued after a refresh. Offline changes remain on that device and do not sync to another device. Login, attendance, fees, results, notices, and service workflows are not connected to an official university system; payments are simulated. Do not use the demo credentials or browser storage for real student records.
+
+The PS-07 pilot and adoption plan is in [`docs/PS-07-rollout-plan.md`](docs/PS-07-rollout-plan.md). It covers a staged department/hostel pilot, moving from existing paper and chat habits, and a staffed service-counter path for students without smartphones.
 
 ---
 

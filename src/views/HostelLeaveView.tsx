@@ -51,6 +51,7 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
   const [emergencyContact, setEmergencyContact] = useState(student.guardianName);
   const [emergencyPhone, setEmergencyPhone] = useState(student.guardianPhone);
   const [formSuccess, setFormSuccess] = useState(false);
+  const scopedLeaves = userRole === 'admin' ? leaves : leaves.filter((leave) => leave.studentId === student.id);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +153,7 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
           Leave Applications & Gate Pass History
         </h3>
 
-        {leaves.map((leave) => {
+        {scopedLeaves.map((leave) => {
           const isApproved = leave.status === 'Approved';
           const isPending = leave.status === 'Pending';
 

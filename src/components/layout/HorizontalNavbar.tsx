@@ -80,7 +80,7 @@ interface HorizontalNavbarProps {
   userRole: UserRole;
   onToggleRole: () => void;
   notifications: AppNotification[];
-  onMarkNotificationAsRead: (id: string) => void;
+  onMarkNotificationAsRead: (id: string, actioned?: boolean) => void;
   onMarkAllNotificationsAsRead: () => void;
   student: StudentProfile;
   admin: AdminProfile;
@@ -442,7 +442,7 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
                         <div
                           key={item.id}
                           onClick={() => {
-                            onMarkNotificationAsRead(item.id);
+                            onMarkNotificationAsRead(item.id, true);
                             if (item.linkTab) onSelectTab(item.linkTab);
                             setShowNotifications(false);
                           }}
@@ -456,6 +456,7 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
                             {item.type === 'assignment' && <Clock className="w-4 h-4 text-amber-600" />}
                             {item.type === 'fee' && <AlertCircle className="w-4 h-4 text-purple-600" />}
                             {item.type === 'event' && <CheckCircle2 className="w-4 h-4 text-teal-600" />}
+                            {item.type === 'service' && <LifeBuoy className="w-4 h-4 text-indigo-600" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-semibold text-slate-800 flex items-center justify-between">

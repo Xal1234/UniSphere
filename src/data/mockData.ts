@@ -908,9 +908,25 @@ export const initialCatalogBooks: LibraryBook[] = [
 
 export const initialHelpdeskTickets: HelpdeskTicket[] = [
   {
+    id: 'TKT-2026-512',
+    ticketNo: 'HD-2026-512',
+    studentName: 'Rahul Pattnaik',
+    studentId: 'STU-01',
+    regNo: '2101106142',
+    category: 'Wi-Fi & LAN',
+    subject: 'Recurring Wi-Fi dropouts in BH-2 evening study area',
+    description: 'A second report from the same block describes intermittent connection loss during peak study hours.',
+    priority: 'High',
+    status: 'Open',
+    createdAt: '2026-10-03 07:10 PM',
+    updatedAt: '2026-10-03 07:10 PM',
+    assignedTo: 'Network Operations Desk',
+  },
+  {
     id: 'TKT-2026-441',
     ticketNo: 'HD-2026-441',
     studentName: 'Rahul Pattnaik',
+    studentId: 'STU-01',
     regNo: '2101106142',
     category: 'Wi-Fi & LAN',
     subject: 'High latency and intermittent DNS dropout in BH-2 Block Room 304',

@@ -44,7 +44,8 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
   const [note, setNote] = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
 
-  const filteredLeaves = leaves.filter((l) => {
+  const scopedLeaves = userRole === 'admin' ? leaves : leaves.filter((l) => l.studentId === student.id);
+  const filteredLeaves = scopedLeaves.filter((l) => {
     if (selectedFilter !== 'All' && l.status !== selectedFilter) return false;
     return true;
   });
@@ -75,8 +76,8 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
     setAdminRemark('');
   };
 
-  const pendingCount = leaves.filter((l) => l.status === 'Pending').length;
-  const approvedCount = leaves.filter((l) => l.status === 'Approved').length;
+  const pendingCount = scopedLeaves.filter((l) => l.status === 'Pending').length;
+  const approvedCount = scopedLeaves.filter((l) => l.status === 'Approved').length;
 
   return (
     <div className="space-y-6">

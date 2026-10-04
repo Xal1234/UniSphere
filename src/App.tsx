@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { Smartphone, Tablet, Laptop, Monitor, Sun, Moon } from 'lucide-react';
 import { UserRole } from './types';
 import {
@@ -28,26 +28,6 @@ import {
   initialStaffLeaves,
 } from './data/mockData';
 import { HorizontalNavbar, navItems } from './components/layout/HorizontalNavbar';
-import { LoginView } from './views/LoginView';
-import { DashboardView } from './views/DashboardView';
-import { AttendanceView } from './views/AttendanceView';
-import { ClassLeaveView } from './views/ClassLeaveView';
-import { HostelLeaveView } from './views/HostelLeaveView';
-import { AssignmentsView } from './views/AssignmentsView';
-import { EventsView } from './views/EventsView';
-import { AcademicsView } from './views/AcademicsView';
-import { FeesView } from './views/FeesView';
-import { AdmissionsView } from './views/AdmissionsView';
-import { NoticesView } from './views/NoticesView';
-import { LibraryView } from './views/LibraryView';
-import { HelpdeskView } from './views/HelpdeskView';
-import { ProfileDocumentsView } from './views/ProfileDocumentsView';
-import { AdminDashboardView } from './views/admin/AdminDashboardView';
-import { AdminCoursesTimetableView } from './views/admin/AdminCoursesTimetableView';
-import { AdminAttendanceMarkingView } from './views/admin/AdminAttendanceMarkingView';
-import { AdminAssignmentsGradingView } from './views/admin/AdminAssignmentsGradingView';
-import { AdminStudentsDirectoryView } from './views/admin/AdminStudentsDirectoryView';
-import { AdminStaffProfileView } from './views/admin/AdminStaffProfileView';
 import {
   Assignment,
   StaffLeaveRequest,
@@ -58,6 +38,42 @@ import {
   ClassAttendanceRecord,
   AppNotification,
 } from './types';
+
+const LoginView = lazy(() => import('./views/LoginView').then((m) => ({ default: m.LoginView })));
+const DashboardView = lazy(() => import('./views/DashboardView').then((m) => ({ default: m.DashboardView })));
+const AttendanceView = lazy(() => import('./views/AttendanceView').then((m) => ({ default: m.AttendanceView })));
+const ClassLeaveView = lazy(() => import('./views/ClassLeaveView').then((m) => ({ default: m.ClassLeaveView })));
+const HostelLeaveView = lazy(() => import('./views/HostelLeaveView').then((m) => ({ default: m.HostelLeaveView })));
+const AssignmentsView = lazy(() => import('./views/AssignmentsView').then((m) => ({ default: m.AssignmentsView })));
+const EventsView = lazy(() => import('./views/EventsView').then((m) => ({ default: m.EventsView })));
+const AcademicsView = lazy(() => import('./views/AcademicsView').then((m) => ({ default: m.AcademicsView })));
+const FeesView = lazy(() => import('./views/FeesView').then((m) => ({ default: m.FeesView })));
+const AdmissionsView = lazy(() => import('./views/AdmissionsView').then((m) => ({ default: m.AdmissionsView })));
+const NoticesView = lazy(() => import('./views/NoticesView').then((m) => ({ default: m.NoticesView })));
+const LibraryView = lazy(() => import('./views/LibraryView').then((m) => ({ default: m.LibraryView })));
+const HelpdeskView = lazy(() => import('./views/HelpdeskView').then((m) => ({ default: m.HelpdeskView })));
+const ProfileDocumentsView = lazy(() => import('./views/ProfileDocumentsView').then((m) => ({ default: m.ProfileDocumentsView })));
+const AdminDashboardView = lazy(() => import('./views/admin/AdminDashboardView').then((m) => ({ default: m.AdminDashboardView })));
+const AdminCoursesTimetableView = lazy(() => import('./views/admin/AdminCoursesTimetableView').then((m) => ({ default: m.AdminCoursesTimetableView })));
+const AdminAttendanceMarkingView = lazy(() => import('./views/admin/AdminAttendanceMarkingView').then((m) => ({ default: m.AdminAttendanceMarkingView })));
+const AdminAssignmentsGradingView = lazy(() => import('./views/admin/AdminAssignmentsGradingView').then((m) => ({ default: m.AdminAssignmentsGradingView })));
+const AdminStudentsDirectoryView = lazy(() => import('./views/admin/AdminStudentsDirectoryView').then((m) => ({ default: m.AdminStudentsDirectoryView })));
+const AdminStaffProfileView = lazy(() => import('./views/admin/AdminStaffProfileView').then((m) => ({ default: m.AdminStaffProfileView })));
+
+const DEMO_DATA_KEY = 'campusone_demo_data_v1';
+
+const loadDemoData = <T,>(key: string, fallback: T): T => {
+  try {
+    const raw = localStorage.getItem(DEMO_DATA_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw) as Record<string, unknown>;
+      if (saved[key] !== undefined) return saved[key] as T;
+    }
+  } catch {
+    // Ignore unavailable storage or an older/corrupt demo snapshot and use the seed data.
+  }
+  return fallback;
+};
 
 export default function App() {
   // Authentication State (Demo accounts: STU001 / Student@123, ADM001 / Admin@123)
@@ -113,34 +129,75 @@ export default function App() {
   // Core Data States
   const [student, setStudent] = useState(initialStudentProfile);
   const [admin, setAdmin] = useState(initialAdminProfile);
-  const [attendanceCourses, setAttendanceCourses] = useState(initialAttendanceCourses);
+  const [attendanceCourses, setAttendanceCourses] = useState(() => loadDemoData('attendanceCourses', initialAttendanceCourses));
   const [timetable, setTimetable] = useState(initialTimetable);
-  const [classLeaves, setClassLeaves] = useState(initialClassLeaves);
-  const [hostelLeaves, setHostelLeaves] = useState(initialHostelLeaves);
-  const [assignments, setAssignments] = useState(initialAssignments);
-  const [events, setEvents] = useState(initialEvents);
-  const [results, setResults] = useState(initialSemesterResults);
-  const [feeBreakdowns, setFeeBreakdowns] = useState(initialFeeBreakdowns);
-  const [feeTransactions, setFeeTransactions] = useState(initialFeeTransactions);
-  const [admissions, setAdmissions] = useState(initialAdmissions);
-  const [notices, setNotices] = useState(initialNotices);
-  const [borrowedBooks, setBorrowedBooks] = useState(initialBorrowedBooks);
-  const [catalogBooks, setCatalogBooks] = useState(initialCatalogBooks);
-  const [helpdeskTickets, setHelpdeskTickets] = useState(initialHelpdeskTickets);
-  const [documents, setDocuments] = useState(initialStudentDocuments);
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => [
-    ...initialNotifications,
-    ...initialAdminNotifications,
-  ]);
+  const [classLeaves, setClassLeaves] = useState(() => loadDemoData('classLeaves', initialClassLeaves));
+  const [hostelLeaves, setHostelLeaves] = useState(() => loadDemoData('hostelLeaves', initialHostelLeaves));
+  const [assignments, setAssignments] = useState(() => loadDemoData('assignments', initialAssignments));
+  const [events, setEvents] = useState(() => loadDemoData('events', initialEvents));
+  const [results, setResults] = useState(() => loadDemoData('results', initialSemesterResults));
+  const [feeBreakdowns, setFeeBreakdowns] = useState(() => loadDemoData('feeBreakdowns', initialFeeBreakdowns));
+  const [feeTransactions, setFeeTransactions] = useState(() => loadDemoData('feeTransactions', initialFeeTransactions));
+  const [admissions, setAdmissions] = useState(() => loadDemoData('admissions', initialAdmissions));
+  const [notices, setNotices] = useState(() => loadDemoData('notices', initialNotices));
+  const [borrowedBooks, setBorrowedBooks] = useState(() => loadDemoData('borrowedBooks', initialBorrowedBooks));
+  const [catalogBooks, setCatalogBooks] = useState(() => loadDemoData('catalogBooks', initialCatalogBooks));
+  const [helpdeskTickets, setHelpdeskTickets] = useState(() => loadDemoData('helpdeskTickets', initialHelpdeskTickets));
+  const [documents, setDocuments] = useState(() => loadDemoData('documents', initialStudentDocuments));
+  const [notifications, setNotifications] = useState<AppNotification[]>(() =>
+    loadDemoData('notifications', [...initialNotifications, ...initialAdminNotifications])
+  );
 
   // Attendance Records State (Stores separate records for different courses, dates, and sessions)
-  const [attendanceRecords, setAttendanceRecords] = useState<ClassAttendanceRecord[]>(initialAttendanceRecords);
+  const [attendanceRecords, setAttendanceRecords] = useState<ClassAttendanceRecord[]>(() => loadDemoData('attendanceRecords', initialAttendanceRecords));
+  const attendanceSessionKeys = useRef(new Set(attendanceRecords.map((record) => `${record.courseCode}|${record.sessionDate}|${record.sessionPeriod}`)));
 
   // Admin Specific Core Data States
-  const [facultyCourses, setFacultyCourses] = useState(initialFacultyCourses);
+  const [facultyCourses, setFacultyCourses] = useState(() => loadDemoData('facultyCourses', initialFacultyCourses));
   const [staffTimetable, setStaffTimetable] = useState(initialStaffTimetable);
-  const [studentDirectory, setStudentDirectory] = useState(initialStudentDirectory);
-  const [staffLeaves, setStaffLeaves] = useState(initialStaffLeaves);
+  const [studentDirectory, setStudentDirectory] = useState(() => loadDemoData('studentDirectory', initialStudentDirectory));
+  const [staffLeaves, setStaffLeaves] = useState(() => loadDemoData('staffLeaves', initialStaffLeaves));
+
+  // Keep prototype actions across reloads on this device; this is local demo storage, not a shared server.
+  useEffect(() => {
+    try {
+      localStorage.setItem(DEMO_DATA_KEY, JSON.stringify({
+        attendanceCourses,
+        classLeaves,
+        hostelLeaves,
+        assignments,
+        events,
+        results,
+        feeBreakdowns,
+        feeTransactions,
+        admissions,
+        notices,
+        borrowedBooks,
+        catalogBooks,
+        helpdeskTickets,
+        documents,
+        notifications,
+        attendanceRecords,
+        facultyCourses,
+        studentDirectory,
+        staffLeaves,
+      }));
+    } catch {
+      // Keep the portal usable if private browsing or storage limits disable persistence.
+    }
+  }, [attendanceCourses, classLeaves, hostelLeaves, assignments, events, results, feeBreakdowns, feeTransactions,
+    admissions, notices, borrowedBooks, catalogBooks, helpdeskTickets, documents, notifications, attendanceRecords,
+    facultyCourses, studentDirectory, staffLeaves]);
+
+  useEffect(() => {
+    if (notifications.some((notification) => !notification.deliveredAt)) {
+      const deliveredAt = new Date().toISOString();
+      setNotifications((prev) => prev.map((notification) => ({
+        ...notification,
+        deliveredAt: notification.deliveredAt || deliveredAt,
+      })));
+    }
+  }, [notifications]);
 
   // Background Theme & Device Preferences State
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
@@ -152,6 +209,7 @@ export default function App() {
     const saved = localStorage.getItem('campusone_device');
     return (saved === 'desktop' || saved === 'tablet' || saved === 'mobile' || saved === 'responsive') ? saved : 'responsive';
   });
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
 
   // Synchronize Dark Mode CSS Class with HTML document
   useEffect(() => {
@@ -166,6 +224,22 @@ export default function App() {
       root.classList.remove('dark');
     }
   }, [themePreference]);
+
+  useEffect(() => {
+    const updateOnlineState = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateOnlineState);
+    window.addEventListener('offline', updateOnlineState);
+    return () => {
+      window.removeEventListener('online', updateOnlineState);
+      window.removeEventListener('offline', updateOnlineState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => undefined);
+    }
+  }, []);
 
   const handleToggleTheme = (theme?: ThemePreference) => {
     const nextTheme = theme || (themePreference === 'dark' ? 'light' : 'dark');
@@ -206,24 +280,17 @@ export default function App() {
       submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
       status: 'Pending' as const,
     };
-    setClassLeaves([newRecord, ...classLeaves]);
-    
-    // Add notification
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'Class Leave Submitted',
-        description: `Application ${newId} submitted for ${newLeaveData.date}.`,
-        time: 'Just now',
-        type: 'leave',
-        read: false,
-        linkTab: 'class-leave',
-      },
-      ...notifications,
+    setClassLeaves((prev) => [newRecord, ...prev]);
+    const createdAt = new Date().toISOString();
+    setNotifications((prev) => [
+      { id: `NOTIF-${Date.now()}-CL-STU`, title: 'Class Leave Submitted', description: `Application ${newId} submitted for ${newLeaveData.date}.`, time: 'Just now', type: 'leave', read: false, linkTab: 'class-leave', targetRole: 'student', targetUserId: newLeaveData.studentId, readAt: undefined, actionedAt: undefined },
+      { id: `NOTIF-${Date.now()}-CL-ADM`, title: 'Class Leave Request Received', description: `${newLeaveData.studentName} submitted ${newId} for review.`, time: 'Just now', type: 'leave', read: false, linkTab: 'admin-cl-approvals', targetRole: 'admin', readAt: undefined, actionedAt: undefined, deliveredAt: createdAt },
+      ...prev,
     ]);
   };
 
   const handleUpdateCLStatus = (id: string, status: 'Approved' | 'Rejected', remark?: string) => {
+    const request = classLeaves.find((item) => item.id === id);
     setClassLeaves((prev) =>
       prev.map((item) =>
         item.id === id
@@ -237,6 +304,14 @@ export default function App() {
           : item
       )
     );
+    if (request) {
+      setNotifications((prev) => [{
+        id: `NOTIF-${Date.now()}-CL-RESULT`,
+        title: `Class Leave ${status}`,
+        description: `${request.id} for ${request.date} was ${status.toLowerCase()}.${remark ? ` ${remark}` : ''}`,
+        time: 'Just now', type: 'leave', read: false, linkTab: 'class-leave', targetRole: 'student', targetUserId: request.studentId,
+      }, ...prev]);
+    }
   };
 
   // Hostel Leave Handlers
@@ -250,22 +325,16 @@ export default function App() {
       status: 'Pending' as const,
       gatePassId: newGatePass,
     };
-    setHostelLeaves([newRecord, ...hostelLeaves]);
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'Hostel Leave Submitted',
-        description: `Outpass requisition ${newId} sent to Warden.`,
-        time: 'Just now',
-        type: 'leave',
-        read: false,
-        linkTab: 'hostel-leave',
-      },
-      ...notifications,
+    setHostelLeaves((prev) => [newRecord, ...prev]);
+    setNotifications((prev) => [
+      { id: `NOTIF-${Date.now()}-HL-STU`, title: 'Hostel Leave Submitted', description: `Outpass requisition ${newId} sent to Warden.`, time: 'Just now', type: 'leave', read: false, linkTab: 'hostel-leave', targetRole: 'student', targetUserId: newRecord.studentId },
+      { id: `NOTIF-${Date.now()}-HL-ADM`, title: 'Hostel Leave Request Received', description: `${newRecord.studentName} submitted ${newId} for warden review.`, time: 'Just now', type: 'leave', read: false, linkTab: 'admin-hl-approvals', targetRole: 'admin' },
+      ...prev,
     ]);
   };
 
   const handleUpdateHLStatus = (id: string, status: 'Approved' | 'Rejected', remark?: string) => {
+    const request = hostelLeaves.find((item) => item.id === id);
     setHostelLeaves((prev) =>
       prev.map((item) =>
         item.id === id
@@ -277,6 +346,13 @@ export default function App() {
           : item
       )
     );
+    if (request) {
+      setNotifications((prev) => [{
+        id: `NOTIF-${Date.now()}-HL-RESULT`, title: `Hostel Leave ${status}`,
+        description: `${request.id} was ${status.toLowerCase()} by the warden.${remark ? ` ${remark}` : ''}`,
+        time: 'Just now', type: 'leave', read: false, linkTab: 'hostel-leave', targetRole: 'student', targetUserId: request.studentId,
+      }, ...prev]);
+    }
   };
 
   // Assignment Submit Handler
@@ -293,17 +369,10 @@ export default function App() {
           : a
       )
     );
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'Assignment Submitted',
-        description: `Coursework uploaded successfully for evaluation.`,
-        time: 'Just now',
-        type: 'assignment',
-        read: false,
-        linkTab: 'assignments',
-      },
-      ...notifications,
+    setNotifications((prev) => [
+      { id: `NOTIF-${Date.now()}-ASN-STU`, title: 'Assignment Submitted', description: 'Coursework uploaded successfully for evaluation.', time: 'Just now', type: 'assignment', read: false, linkTab: 'assignments', targetRole: 'student', targetUserId: student.id },
+      { id: `NOTIF-${Date.now()}-ASN-ADM`, title: 'Assignment Submission Received', description: `A submission is ready for grading.`, time: 'Just now', type: 'assignment', read: false, linkTab: 'admin-grading', targetRole: 'admin' },
+      ...prev,
     ]);
   };
 
@@ -320,18 +389,11 @@ export default function App() {
           : a
       )
     );
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'Assignment Evaluated & Graded',
-        description: `Score: ${marks} Marks recorded with faculty feedback.`,
-        time: 'Just now',
-        type: 'assignment',
-        read: false,
-        linkTab: userRole === 'admin' ? 'admin-grading' : 'assignments',
-      },
-      ...notifications,
-    ]);
+    setNotifications((prev) => [{
+      id: `NOTIF-${Date.now()}-ASN-GRADE`, title: 'Assignment Evaluated & Graded',
+      description: `Score: ${marks} marks recorded with faculty feedback.`, time: 'Just now', type: 'assignment', read: false,
+      linkTab: 'assignments', targetRole: 'student', targetUserId: student.id,
+    }, ...prev]);
   };
 
   // Admin Assignment Creator Handler
@@ -342,23 +404,23 @@ export default function App() {
       id: newId,
       status: 'Pending',
     };
-    setAssignments([created, ...assignments]);
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'New Course Assignment Created',
-        description: `${newAsn.courseCode}: ${newAsn.title} published with due date ${newAsn.dueDate}.`,
-        time: 'Just now',
-        type: 'assignment',
-        read: false,
-        linkTab: userRole === 'admin' ? 'admin-assignments' : 'assignments',
-      },
-      ...notifications,
-    ]);
+    setAssignments((prev) => [created, ...prev]);
+    setNotifications((prev) => [{
+      id: `NOTIF-${Date.now()}-ASN-NEW`, title: 'New Course Assignment Created',
+      description: `${newAsn.courseCode}: ${newAsn.title} is due ${newAsn.dueDate}.`, time: 'Just now', type: 'assignment', read: false,
+      linkTab: 'assignments', targetRole: 'student', targetUserId: student.id,
+    }, ...prev]);
   };
 
   // Admin Class Attendance Session Handler (with duplicate prevention and correction support)
   const handleSaveAttendanceRecord = (record: ClassAttendanceRecord, isCorrection: boolean) => {
+    if (userRole !== 'admin') return;
+    const sessionKey = `${record.courseCode}|${record.sessionDate}|${record.sessionPeriod}`;
+    const sessionAlreadyExists = attendanceSessionKeys.current.has(sessionKey);
+    if (sessionAlreadyExists && !isCorrection) return;
+    if (!sessionAlreadyExists && isCorrection) return;
+    if (!sessionAlreadyExists) attendanceSessionKeys.current.add(sessionKey);
+
     if (isCorrection) {
       // Update existing record without creating a duplicate
       setAttendanceRecords((prev) =>
@@ -379,7 +441,8 @@ export default function App() {
         )
       );
 
-      const isCurrentStudentPresent = record.presentStudentIds.includes(student.id);
+      const currentStudentDirectoryId = studentDirectory.find((s) => s.regNo === student.regNo)?.id || student.id;
+      const isCurrentStudentPresent = record.presentStudentIds.includes(currentStudentDirectoryId);
       setAttendanceCourses((prev) =>
         prev.map((c) =>
           c.code === record.courseCode
@@ -427,7 +490,8 @@ export default function App() {
     };
 
     // 2. Student gets individual personal notification (showing only their own status, opening read-only attendance page)
-    const isStudentPresent = record.presentStudentIds.includes(student.id);
+    const currentStudentDirectoryId = studentDirectory.find((s) => s.regNo === student.regNo)?.id || student.id;
+    const isStudentPresent = record.presentStudentIds.includes(currentStudentDirectoryId);
     const studentNotification: AppNotification = {
       id: `NOTIF-${Date.now()}-STU`,
       title: 'Class Attendance Logged',
@@ -439,6 +503,8 @@ export default function App() {
       read: false,
       linkTab: 'attendance',
       targetRole: 'student',
+      targetUserId: currentStudentDirectoryId,
+      deliveredAt: new Date().toISOString(),
     };
 
     setNotifications((prev) => [adminNotification, studentNotification, ...prev]);
@@ -454,8 +520,8 @@ export default function App() {
       status: 'Pending',
       approvedBy: 'Registrar Office',
     };
-    setStaffLeaves([record, ...staffLeaves]);
-    setNotifications([
+    setStaffLeaves((prev) => [record, ...prev]);
+    setNotifications((prev) => [
       {
         id: `NOTIF-${Date.now()}`,
         title: 'Staff Leave Requisition Dispatched',
@@ -464,8 +530,9 @@ export default function App() {
         type: 'leave',
         read: false,
         linkTab: 'admin-profile',
+        targetRole: 'admin',
       },
-      ...notifications,
+      ...prev,
     ]);
   };
 
@@ -488,7 +555,7 @@ export default function App() {
 
   const handleAddEvent = (newEvent: Parameters<NonNullable<React.ComponentProps<typeof EventsView>['onAddEvent']>>[0]) => {
     const id = `EVT-${String(events.length + 1).padStart(2, '0')}`;
-    setEvents([
+    setEvents((prev) => [
       {
         ...newEvent,
         id,
@@ -496,8 +563,13 @@ export default function App() {
         isRsvpd: true,
         isPast: false,
       },
-      ...events,
+      ...prev,
     ]);
+    setNotifications((prev) => [{
+      id: `NOTIF-${Date.now()}-EVENT`, title: 'New Campus Event Published',
+      description: `${newEvent.title} is scheduled for ${newEvent.date}.`, time: 'Just now', type: 'event', read: false,
+      linkTab: 'events', targetRole: 'student',
+    }, ...prev]);
   };
 
   const handleUpdateEvent = (id: string, updated: Partial<CampusEvent>) => {
@@ -510,7 +582,7 @@ export default function App() {
     setEvents((prev) =>
       prev.map((e) => (e.id === id ? { ...e, status: 'Cancelled' as const } : e))
     );
-    setNotifications([
+    setNotifications((prev) => [
       {
         id: `NOTIF-${Date.now()}`,
         title: 'Campus Event Cancelled',
@@ -518,9 +590,10 @@ export default function App() {
         time: 'Just now',
         type: 'event',
         read: false,
-        linkTab: userRole === 'admin' ? 'admin-events' : 'events',
+        linkTab: 'events',
+        targetRole: 'student',
       },
-      ...notifications,
+      ...prev,
     ]);
   };
 
@@ -531,19 +604,14 @@ export default function App() {
       ...newNoticeData,
       id,
     };
-    setNotices([notice, ...notices]);
-    setNotifications([
-      {
-        id: `NOTIF-${Date.now()}`,
-        title: 'New Campus Circular Published',
-        description: `${notice.title} issued by ${notice.department}.`,
-        time: 'Just now',
-        type: 'notice',
-        read: false,
-        linkTab: userRole === 'admin' ? 'admin-notices' : 'notices',
-      },
-      ...notifications,
-    ]);
+    setNotices((prev) => [notice, ...prev]);
+    const audience = notice.audience || 'All Students';
+    const noticeRole = audience === 'Staff' ? 'admin' : 'student';
+    setNotifications((prev) => [{
+      id: `NOTIF-${Date.now()}-NOTICE`, title: 'New Campus Circular Published',
+      description: `${notice.title} issued by ${notice.department}.`, time: 'Just now', type: 'notice', read: false,
+      linkTab: noticeRole === 'admin' ? 'admin-notices' : 'notices', targetRole: noticeRole, targetAudience: audience,
+    }, ...prev]);
   };
 
   const handleUpdateNotice = (id: string, updated: Partial<Notice>) => {
@@ -580,9 +648,9 @@ export default function App() {
         : ('Tuition Fee' as const),
       status: 'Successful' as const,
     };
-    setFeeTransactions([newTxn, ...feeTransactions]);
+    setFeeTransactions((prev) => [newTxn, ...prev]);
 
-    setNotifications([
+    setNotifications((prev) => [
       {
         id: `NOTIF-${Date.now()}`,
         title: 'Fee Payment Received',
@@ -591,8 +659,10 @@ export default function App() {
         type: 'fee',
         read: false,
         linkTab: 'fees',
+        targetRole: 'student',
+        targetUserId: student.id,
       },
-      ...notifications,
+      ...prev,
     ]);
   };
 
@@ -645,8 +715,8 @@ export default function App() {
   };
 
   // Helpdesk Handlers
-  const handleCreateTicket = (ticketData: Parameters<React.ComponentProps<typeof HelpdeskView>['onCreateTicket']>[0]) => {
-    const num = Math.floor(400 + Math.random() * 500);
+  const handleCreateTicket = (ticketData: Parameters<React.ComponentProps<typeof HelpdeskView>['onCreateTicket']>[0]): string => {
+    const num = Date.now().toString().slice(-6);
     const newTkt = {
       ...ticketData,
       id: `TKT-2026-${num}`,
@@ -655,7 +725,13 @@ export default function App() {
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
       updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
     };
-    setHelpdeskTickets([newTkt, ...helpdeskTickets]);
+    setHelpdeskTickets((prev) => [newTkt, ...prev]);
+    setNotifications((prev) => [
+      { id: `NOTIF-${Date.now()}-TKT-ADM`, title: 'New Helpdesk Request', description: `${newTkt.ticketNo} · ${newTkt.category} · ${newTkt.priority} priority.`, time: 'Just now', type: 'service', read: false, linkTab: 'admin-helpdesk', targetRole: 'admin' },
+      { id: `NOTIF-${Date.now()}-TKT-STU`, title: 'Service Request Registered', description: `${newTkt.ticketNo} is open. Keep this number to track your request.`, time: 'Just now', type: 'service', read: false, linkTab: 'helpdesk', targetRole: 'student', targetUserId: newTkt.studentId },
+      ...prev,
+    ]);
+    return newTkt.ticketNo;
   };
 
   const handleUpdateTicketStatus = (
@@ -663,6 +739,18 @@ export default function App() {
     status: Parameters<React.ComponentProps<typeof HelpdeskView>['onUpdateTicketStatus']>[1],
     resolution?: string
   ) => {
+    if (userRole !== 'admin') return;
+    const ticket = helpdeskTickets.find((item) => item.id === id);
+    if (!ticket) return;
+    const serviceDesk: Record<string, string> = {
+      'Hostel Maintenance': 'Facilities & Hostel Maintenance Desk',
+      'Wi-Fi & LAN': 'Network Operations Desk',
+      'ERP & Portal': 'University ERP Cell',
+      'Exam Cell': 'Examination Cell',
+      'ID Card': 'Student Services Counter',
+      Transport: 'Campus Transport Desk',
+      Library: 'Central Library Helpdesk',
+    };
     setHelpdeskTickets((prev) =>
       prev.map((t) =>
         t.id === id
@@ -670,11 +758,19 @@ export default function App() {
               ...t,
               status,
               resolution: resolution || t.resolution,
+              assignedTo: status === 'In Progress' ? (t.assignedTo || serviceDesk[t.category]) : t.assignedTo,
               updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
             }
           : t
       )
     );
+    const recipient = ticket.studentId || studentDirectory.find((s) => s.regNo === ticket.regNo)?.id;
+    setNotifications((prev) => [{
+      id: `NOTIF-${Date.now()}-TKT-STATUS`,
+      title: status === 'Resolved' ? 'Service Request Resolved' : 'Service Request Assigned',
+      description: `${ticket.ticketNo} is now ${status.toLowerCase()}.${resolution ? ` ${resolution}` : ''}`,
+      time: 'Just now', type: 'service', read: false, linkTab: 'helpdesk', targetRole: 'student', targetUserId: recipient,
+    }, ...prev]);
   };
 
   // Document Upload Handler
@@ -691,14 +787,30 @@ export default function App() {
   };
 
   // Notifications
-  const handleMarkNotificationAsRead = (id: string) => {
+  const handleMarkNotificationAsRead = (id: string, actioned = false) => {
+    const timestamp = new Date().toISOString();
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === id ? {
+        ...n,
+        read: true,
+        readAt: n.readAt || timestamp,
+        ...(actioned ? { actionedAt: timestamp } : {}),
+      } : n))
     );
   };
 
   const handleMarkAllNotificationsAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const timestamp = new Date().toISOString();
+    setNotifications((prev) => prev.map((n) => {
+      const roleMatches = n.targetRole === userRole || n.targetRole === 'both';
+      const directoryStudentId = studentDirectory.find((record) => record.regNo === student.regNo)?.id;
+      const userMatches = userRole !== 'student' || !n.targetUserId || n.targetUserId === student.id || n.targetUserId === directoryStudentId || n.targetUserId === authenticatedAccountId;
+      const audience = n.targetAudience || 'All Students';
+      const audienceMatches = userRole !== 'student' || audience === 'All Students' ||
+        (audience === 'CSE Students' && /cse|computer science/i.test(student.branch)) ||
+        (audience === 'Hostel Residents' && Boolean(student.hostel));
+      return roleMatches && userMatches && audienceMatches ? { ...n, read: true, readAt: n.readAt || timestamp } : n;
+    }));
   };
 
   // Current tab label
@@ -710,15 +822,29 @@ export default function App() {
   const pendingAssignmentsCount = assignments.filter((a) => a.status === 'Pending').length;
 
   // Filter notifications strictly by recipient role (prevents admin notices from leaking to students)
-  const roleFilteredNotifications = notifications.filter(
-    (n) => !n.targetRole || n.targetRole === 'both' || n.targetRole === userRole
-  );
+  const isStudentAudience = (audience?: Notice['audience']) => {
+    if (!audience || audience === 'All Students') return true;
+    if (audience === 'CSE Students') return /cse|computer science/i.test(student.branch);
+    if (audience === 'Hostel Residents') return Boolean(student.hostel);
+    return false;
+  };
+
+  const roleFilteredNotifications = notifications.filter((n) => {
+    const roleMatches = n.targetRole === userRole || n.targetRole === 'both';
+    const directoryStudentId = studentDirectory.find((record) => record.regNo === student.regNo)?.id;
+    const userMatches = userRole !== 'student' || !n.targetUserId || n.targetUserId === student.id || n.targetUserId === directoryStudentId || n.targetUserId === authenticatedAccountId;
+    const audienceMatches = userRole !== 'student' || isStudentAudience(n.targetAudience);
+    return roleMatches && userMatches && audienceMatches;
+  });
+  const visibleNotices = userRole === 'admin' ? notices : notices.filter((notice) => isStudentAudience(notice.audience));
 
   // If user is not logged in, show the single sign-on Login page
   if (!isAuthenticated) {
     return (
       <div className={themePreference === 'dark' ? 'dark' : ''}>
-        <LoginView onLogin={handleLogin} />
+        <Suspense fallback={<div className="min-h-screen grid place-items-center bg-slate-50 text-sm text-slate-500">Opening secure sign-in…</div>}>
+          <LoginView onLogin={handleLogin} />
+        </Suspense>
       </div>
     );
   }
@@ -869,8 +995,15 @@ export default function App() {
           onChangeDevicePreference={handleChangeDevicePreference}
         />
 
+        {!isOnline && (
+          <div role="status" className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900 sm:mx-6 lg:mx-8">
+            Offline mode · Saved changes stay on this device until you reconnect. This demo does not sync between devices.
+          </div>
+        )}
+
         {/* Main Content Viewport: Preserved exactly as is */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <Suspense fallback={<div role="status" className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Loading this campus service…</div>}>
           {/* Admin / Staff Dedicated Workspace Views */}
           {currentTab === 'admin-dashboard' && (
             <AdminDashboardView
@@ -882,8 +1015,10 @@ export default function App() {
               pendingHLCount={hostelLeaves.filter((l) => l.status === 'Pending').length}
               pendingGradingCount={assignments.filter((a) => a.status === 'Submitted').length}
               openHelpdeskCount={helpdeskTickets.filter((t) => t.status !== 'Resolved').length}
+              helpdeskTickets={helpdeskTickets}
+              studentNotifications={notifications.filter((n) => n.targetRole === 'student' || n.targetRole === 'both')}
               events={events}
-              notices={notices}
+              notices={visibleNotices}
               onNavigateTab={(tab) => setCurrentTab(tab)}
               onQuickCreateAssignment={() => {
                 setOpenCreateAssignmentModal(true);
@@ -963,7 +1098,7 @@ export default function App() {
 
           {currentTab === 'admin-notices' && (
             <NoticesView
-              notices={notices}
+              notices={visibleNotices}
               userRole="admin"
               onPublishNotice={handlePublishNotice}
               onUpdateNotice={handleUpdateNotice}
@@ -975,6 +1110,7 @@ export default function App() {
               tickets={helpdeskTickets}
               userRole="admin"
               student={student}
+              students={studentDirectory}
               onCreateTicket={handleCreateTicket}
               onUpdateTicketStatus={handleUpdateTicketStatus}
             />
@@ -1019,7 +1155,7 @@ export default function App() {
               timetable={timetable}
               assignments={assignments}
               events={events}
-              notices={notices}
+              notices={visibleNotices}
               feeBreakdowns={feeBreakdowns}
               latestResult={results[0]}
               onNavigate={(tab) => setCurrentTab(tab)}
@@ -1120,7 +1256,7 @@ export default function App() {
 
           {currentTab === 'notices' && (
             <NoticesView
-              notices={notices}
+              notices={visibleNotices}
               userRole={userRole}
               onPublishNotice={handlePublishNotice}
               onUpdateNotice={handleUpdateNotice}
@@ -1142,6 +1278,7 @@ export default function App() {
               tickets={helpdeskTickets}
               userRole={userRole}
               student={student}
+              students={studentDirectory}
               onCreateTicket={handleCreateTicket}
               onUpdateTicketStatus={handleUpdateTicketStatus}
             />
@@ -1156,6 +1293,7 @@ export default function App() {
               onUploadDocument={handleUploadDocument}
             />
           )}
+          </Suspense>
         </main>
       </div>
     </div>
