@@ -782,7 +782,7 @@ export const initialNotices: Notice[] = [
     date: '2026-09-20',
     department: 'Office of the Chief Warden',
     isUrgent: false,
-    content: 'All hostel inmates of Brahmaputra, Mahanadi, and Baitarani Halls are instructed to adhere to the revised entry timings of 09:30 PM. Out-campus leaves must be routed through the CampusOne online gate pass module at least 24 hours prior to departure.',
+    content: 'All hostel inmates of Brahmaputra, Mahanadi, and Baitarani Halls are instructed to adhere to the revised entry timings of 09:30 PM. Out-campus leaves must be routed through the UNISPHERE online gate pass module at least 24 hours prior to departure.',
     signedBy: 'Prof. Mihir Kumar Sahoo, Hostel Supdt.',
   },
   {
@@ -908,25 +908,9 @@ export const initialCatalogBooks: LibraryBook[] = [
 
 export const initialHelpdeskTickets: HelpdeskTicket[] = [
   {
-    id: 'TKT-2026-512',
-    ticketNo: 'HD-2026-512',
-    studentName: 'Rahul Pattnaik',
-    studentId: 'STU-01',
-    regNo: '2101106142',
-    category: 'Wi-Fi & LAN',
-    subject: 'Recurring Wi-Fi dropouts in BH-2 evening study area',
-    description: 'A second report from the same block describes intermittent connection loss during peak study hours.',
-    priority: 'High',
-    status: 'Open',
-    createdAt: '2026-10-03 07:10 PM',
-    updatedAt: '2026-10-03 07:10 PM',
-    assignedTo: 'Network Operations Desk',
-  },
-  {
     id: 'TKT-2026-441',
     ticketNo: 'HD-2026-441',
     studentName: 'Rahul Pattnaik',
-    studentId: 'STU-01',
     regNo: '2101106142',
     category: 'Wi-Fi & LAN',
     subject: 'High latency and intermittent DNS dropout in BH-2 Block Room 304',

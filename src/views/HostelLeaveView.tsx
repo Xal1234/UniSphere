@@ -41,20 +41,46 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
   const [selectedReviewLeave, setSelectedReviewLeave] = useState<HostelLeaveRequest | null>(null);
   const [wardenRemark, setWardenRemark] = useState('');
 
+  // Dynamic local date calculation (never hardcoded)
+  const getTodayLocalDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getTodayLocalDate();
+
   // Form states
-  const [depDate, setDepDate] = useState('2026-10-15');
+  const [depDate, setDepDate] = useState(todayStr);
   const [depTime, setDepTime] = useState('05:30 PM');
-  const [retDate, setRetDate] = useState('2026-10-18');
+  const [retDate, setRetDate] = useState(todayStr);
   const [retTime, setRetTime] = useState('08:00 PM');
   const [destination, setDestination] = useState('Cuttack, Odisha');
   const [reason, setReason] = useState('Home visit for weekend and family function');
   const [emergencyContact, setEmergencyContact] = useState(student.guardianName);
   const [emergencyPhone, setEmergencyPhone] = useState(student.guardianPhone);
+  const [dateError, setDateError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState(false);
-  const scopedLeaves = userRole === 'admin' ? leaves : leaves.filter((leave) => leave.studentId === student.id);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const currentToday = getTodayLocalDate();
+
+    // Prevent selecting or submitting leave dates in the past
+    if (!depDate || depDate < currentToday) {
+      setDateError(`Invalid departure date: ${depDate || 'Empty'}. Hostel outpass cannot be applied for past dates. Please select today (${currentToday}) or a future date.`);
+      return;
+    }
+
+    // Ensure the end date is not before the start date
+    if (!retDate || retDate < depDate) {
+      setDateError(`Invalid return date: Return date (${retDate}) cannot be earlier than departure date (${depDate}).`);
+      return;
+    }
+
+    setDateError(null);
     onApplyHostelLeave({
       studentId: student.id,
       studentName: student.name,
@@ -74,6 +100,7 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
     setTimeout(() => {
       setFormSuccess(false);
       setShowApplyModal(false);
+      setDateError(null);
     }, 900);
   };
 
@@ -153,7 +180,7 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
           Leave Applications & Gate Pass History
         </h3>
 
-        {scopedLeaves.map((leave) => {
+        {leaves.map((leave) => {
           const isApproved = leave.status === 'Approved';
           const isPending = leave.status === 'Pending';
 
@@ -381,10 +408,22 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
                   <input
                     type="date"
                     required
+                    min={getTodayLocalDate()}
                     value={depDate}
-                    onChange={(e) => setDepDate(e.target.value)}
+                    onChange={(e) => {
+                      setDepDate(e.target.value);
+                      if (retDate < e.target.value) {
+                        setRetDate(e.target.value);
+                      }
+                      if (e.target.value >= getTodayLocalDate()) {
+                        setDateError(null);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Must be today or a future date
+                  </span>
                 </div>
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Departure Time *</label>
@@ -405,10 +444,19 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
                   <input
                     type="date"
                     required
+                    min={depDate || getTodayLocalDate()}
                     value={retDate}
-                    onChange={(e) => setRetDate(e.target.value)}
+                    onChange={(e) => {
+                      setRetDate(e.target.value);
+                      if (e.target.value >= depDate) {
+                        setDateError(null);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Must be on or after departure date
+                  </span>
                 </div>
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Return Time *</label>
@@ -469,6 +517,13 @@ export const HostelLeaveView: React.FC<HostelLeaveViewProps> = ({
                   />
                 </div>
               </div>
+
+              {dateError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg font-semibold text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{dateError}</span>
+                </div>
+              )}
 
               {formSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-semibold flex items-center gap-2">

@@ -93,7 +93,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <div className="flex items-center gap-2 min-w-0">
           <span className="hidden sm:inline-block text-xs font-semibold uppercase tracking-wider text-slate-400">
-            CampusOne
+            UNISPHERE
           </span>
           <span className="hidden sm:inline-block text-slate-300">/</span>
           <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate">
@@ -346,7 +346,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
               <div className="border-t border-slate-100 pt-1 mt-1">
                 <div className="px-4 py-1.5 text-[11px] text-slate-400">
-                  CampusOne · BPUT Portal v2.4
+                  UNISPHERE · BPUT Portal v2.4
                 </div>
               </div>
             </div>

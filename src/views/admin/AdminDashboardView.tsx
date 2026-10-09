@@ -29,9 +29,6 @@ import {
   FacultyCourse,
   StaffTimetableSlot,
   StudentRecord,
-  StaffPersona,
-  HelpdeskTicket,
-  AppNotification,
 } from '../../types';
 
 interface AdminDashboardViewProps {
@@ -43,8 +40,6 @@ interface AdminDashboardViewProps {
   pendingHLCount: number;
   pendingGradingCount: number;
   openHelpdeskCount: number;
-  helpdeskTickets: HelpdeskTicket[];
-  studentNotifications: AppNotification[];
   events: CampusEvent[];
   notices: Notice[];
   onNavigateTab: (tab: string) => void;
@@ -63,8 +58,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   pendingHLCount,
   pendingGradingCount,
   openHelpdeskCount,
-  helpdeskTickets,
-  studentNotifications,
   events,
   notices,
   onNavigateTab,
@@ -74,34 +67,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onQuickApplyStaffLeave,
 }) => {
   const [selectedDay, setSelectedDay] = useState<StaffTimetableSlot['day']>('Monday');
-  const [activePersona, setActivePersona] = useState<StaffPersona>('Dean & Chief Warden');
 
   // Filter staff timetable for selected day
   const dailySchedule = staffTimetable.filter((s) => s.day === selectedDay);
 
   // Defaulter students below 75%
   const defaulterStudents = studentDirectory.filter((s) => s.attendancePct < 75);
-  const timestamp = (value: string) => Date.parse(value);
-  const openTickets = helpdeskTickets.filter((ticket) => ticket.status !== 'Resolved');
-  const agingTickets = openTickets.filter((ticket) => {
-    const created = timestamp(ticket.createdAt);
-    return Number.isFinite(created) && Date.now() - created >= 48 * 60 * 60 * 1000;
-  });
-  const repeatedIssueCategories = Object.entries(openTickets.reduce<Record<string, number>>((counts, ticket) => {
-    counts[ticket.category] = (counts[ticket.category] || 0) + 1;
-    return counts;
-  }, {})).filter(([, count]) => count > 1).sort((a, b) => b[1] - a[1]);
-  const resolvedDurations = helpdeskTickets.filter((ticket) => ticket.status === 'Resolved').map((ticket) => {
-    const created = timestamp(ticket.createdAt);
-    const resolved = timestamp(ticket.updatedAt);
-    return Number.isFinite(created) && Number.isFinite(resolved) && resolved >= created ? (resolved - created) / 3600000 : null;
-  }).filter((hours): hours is number => hours !== null);
-  const averageResolutionHours = resolvedDurations.length
-    ? resolvedDurations.reduce((sum, hours) => sum + hours, 0) / resolvedDurations.length
-    : null;
-  const deliveredStudentAlerts = studentNotifications.filter((notification) => Boolean(notification.deliveredAt));
-  const openedStudentAlerts = deliveredStudentAlerts.filter((notification) => notification.read).length;
-  const actionedStudentAlerts = deliveredStudentAlerts.filter((notification) => Boolean(notification.actionedAt)).length;
 
   const days: StaffTimetableSlot['day'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -153,35 +124,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <FileText className="w-3.5 h-3.5 text-slate-500" />
             Staff Leave
           </button>
-        </div>
-      </div>
-
-      {/* Staff Persona Filter / Context Bar */}
-      <div className="bg-slate-900 text-white rounded-xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <ShieldCheck className="w-5 h-5 text-teal-400 shrink-0" />
-          <div>
-            <div className="text-xs font-bold">Administrative Persona & Scope</div>
-            <div className="text-[11px] text-slate-300">
-              Active Role: <span className="text-teal-300 font-semibold">{activePersona}</span> (All university workflows enabled)
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 p-1 bg-slate-800 rounded-lg text-xs overflow-x-auto">
-          {(['Dean & Chief Warden', 'Course Faculty', 'Hostel Warden', 'Office Administrator'] as const).map((persona) => (
-            <button
-              key={persona}
-              onClick={() => setActivePersona(persona)}
-              className={`px-2.5 py-1 rounded-md transition-colors whitespace-nowrap text-[11px] font-medium ${
-                activePersona === persona
-                  ? 'bg-teal-600 text-white font-bold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              {persona}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -516,44 +458,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </div>
         </div>
       </div>
-
-      {/* 5. PS-07 service operations and notice engagement */}
-      <section className="space-y-3" aria-labelledby="operations-monitor-title">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h3 id="operations-monitor-title" className="text-base font-bold text-slate-900">Service Operations & Communication Monitor</h3>
-            <p className="text-xs text-slate-500">Queue age, repeated issues, resolution speed, and in-app notice engagement</p>
-          </div>
-          <button onClick={() => onNavigateTab('admin-helpdesk')} className="text-xs font-semibold text-teal-700 hover:underline">Open service desk</button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-slate-500">Open requests</div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">{openHelpdeskCount}</div>
-            <div className="mt-1 text-xs text-rose-700">{agingTickets.length} waiting 48+ hours</div>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-slate-500">Recurring issue signals</div>
-            {repeatedIssueCategories.length ? repeatedIssueCategories.slice(0, 2).map(([category, count]) => (
-              <div key={category} className="mt-2 flex items-center justify-between gap-2 text-xs">
-                <span className="truncate text-slate-700">{category}</span><strong className="text-amber-700">{count} open</strong>
-              </div>
-            )) : <div className="mt-2 text-sm font-semibold text-slate-900">No repeat category detected</div>}
-            <div className="mt-2 text-[11px] text-slate-500">Based on repeated open ticket categories</div>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-slate-500">Average resolution time</div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">{averageResolutionHours === null ? '—' : `${averageResolutionHours.toFixed(1)}h`}</div>
-            <div className="mt-1 text-xs text-slate-500">From resolved demo tickets</div>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="text-[11px] uppercase tracking-wide font-semibold text-slate-500">In-app student alert delivery</div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">{deliveredStudentAlerts.length}</div>
-            <div className="mt-1 text-xs text-teal-700">{openedStudentAlerts} read · {actionedStudentAlerts} opened the linked action</div>
-          </div>
-        </div>
-        <p className="text-[10px] text-slate-400">Prototype metrics are calculated from the sample records and actions stored in this browser.</p>
-      </section>
     </div>
   );
 };

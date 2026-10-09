@@ -8,7 +8,6 @@ import {
   EyeOff,
   ArrowRight,
   AlertCircle,
-  CheckCircle2,
   Building,
   KeyRound,
   Info,
@@ -64,11 +63,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300 font-bold text-lg shadow-inner">
-            C1
+            U
           </div>
           <div>
             <div className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              CampusOne <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-900/60 text-teal-300 border border-teal-700/50">UniSphere</span>
+              UNISPHERE
             </div>
             <div className="text-xs text-slate-400 font-medium">
               Biju Patnaik University of Technology · Central Academic ERP

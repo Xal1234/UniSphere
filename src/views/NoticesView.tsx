@@ -39,7 +39,6 @@ export const NoticesView: React.FC<NoticesViewProps> = ({
   // New notice form states
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState<Notice['category']>('Academic');
-  const [newAudience, setNewAudience] = useState<NonNullable<Notice['audience']>>('All Students');
   const [newDept, setNewDept] = useState('Office of the Dean & Examination Cell');
   const [newIsUrgent, setNewIsUrgent] = useState(false);
   const [newContent, setNewContent] = useState('');
@@ -75,7 +74,6 @@ export const NoticesView: React.FC<NoticesViewProps> = ({
     onPublishNotice({
       title: newTitle,
       category: newCategory,
-      audience: newAudience,
       date: new Date().toISOString().split('T')[0],
       department: newDept,
       isUrgent: newIsUrgent,
@@ -290,7 +288,7 @@ export const NoticesView: React.FC<NoticesViewProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Category *</label>
                   <select
@@ -315,19 +313,6 @@ export const NoticesView: React.FC<NoticesViewProps> = ({
                     onChange={(e) => setNewDept(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800"
                   />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Target Audience *</label>
-                  <select
-                    value={newAudience}
-                    onChange={(e) => setNewAudience(e.target.value as NonNullable<Notice['audience']>)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800"
-                  >
-                    <option value="All Students">All Students</option>
-                    <option value="CSE Students">CSE Students</option>
-                    <option value="Hostel Residents">Hostel Residents</option>
-                    <option value="Staff">Staff</option>
-                  </select>
                 </div>
               </div>
 

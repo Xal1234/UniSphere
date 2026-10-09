@@ -196,7 +196,6 @@ export interface Notice {
   content: string;
   signedBy: string;
   attachmentName?: string;
-  audience?: 'All Students' | 'CSE Students' | 'Hostel Residents' | 'Staff';
 }
 
 export interface LibraryBook {
@@ -229,7 +228,6 @@ export interface HelpdeskTicket {
   id: string;
   ticketNo: string;
   studentName: string;
-  studentId?: string;
   regNo: string;
   category: 'Hostel Maintenance' | 'Wi-Fi & LAN' | 'ERP & Portal' | 'Exam Cell' | 'ID Card' | 'Transport' | 'Library';
   subject: string;
@@ -257,15 +255,11 @@ export interface AppNotification {
   title: string;
   description: string;
   time: string;
-  type: 'notice' | 'leave' | 'fee' | 'assignment' | 'event' | 'attendance' | 'service';
+  type: 'notice' | 'leave' | 'fee' | 'assignment' | 'event' | 'attendance';
   read: boolean;
   linkTab?: string;
   targetRole?: 'student' | 'admin' | 'both';
   targetUserId?: string;
-  targetAudience?: Notice['audience'];
-  deliveredAt?: string;
-  readAt?: string;
-  actionedAt?: string;
 }
 
 export interface ClassAttendanceRecord {

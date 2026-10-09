@@ -80,7 +80,7 @@ interface HorizontalNavbarProps {
   userRole: UserRole;
   onToggleRole: () => void;
   notifications: AppNotification[];
-  onMarkNotificationAsRead: (id: string, actioned?: boolean) => void;
+  onMarkNotificationAsRead: (id: string) => void;
   onMarkAllNotificationsAsRead: () => void;
   student: StudentProfile;
   admin: AdminProfile;
@@ -211,11 +211,11 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
               className="flex items-center gap-2.5 text-left group focus:outline-none"
             >
               <div className="w-8 h-8 rounded-lg bg-teal-500/15 border border-teal-400/30 flex items-center justify-center text-teal-300 font-bold text-sm tracking-tight transition-transform group-hover:scale-105">
-                C1
+                U
               </div>
               <div className="flex flex-col">
                 <span className="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">
-                  CampusOne
+                  UNISPHERE
                 </span>
                 <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 leading-tight">
                   {userRole === 'admin' ? 'Faculty & Admin Portal' : 'BPUT Academic Portal'}
@@ -442,7 +442,7 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
                         <div
                           key={item.id}
                           onClick={() => {
-                            onMarkNotificationAsRead(item.id, true);
+                            onMarkNotificationAsRead(item.id);
                             if (item.linkTab) onSelectTab(item.linkTab);
                             setShowNotifications(false);
                           }}
@@ -456,7 +456,6 @@ export const HorizontalNavbar: React.FC<HorizontalNavbarProps> = ({
                             {item.type === 'assignment' && <Clock className="w-4 h-4 text-amber-600" />}
                             {item.type === 'fee' && <AlertCircle className="w-4 h-4 text-purple-600" />}
                             {item.type === 'event' && <CheckCircle2 className="w-4 h-4 text-teal-600" />}
-                            {item.type === 'service' && <LifeBuoy className="w-4 h-4 text-indigo-600" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-semibold text-slate-800 flex items-center justify-between">

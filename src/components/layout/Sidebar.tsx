@@ -83,11 +83,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed ? (
             <div className="flex items-center gap-2.5 overflow-hidden">
               <div className="w-8 h-8 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-base shrink-0">
-                C1
+                U
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-base font-bold tracking-tight text-white truncate">
-                  CampusOne
+                  UNISPHERE
                 </span>
                 <span className="text-[11px] font-medium text-slate-400 truncate">
                   BPUT Portal
@@ -97,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <div className="w-full flex justify-center">
               <div className="w-9 h-9 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-base">
-                C1
+                U
               </div>
             </div>
           )}

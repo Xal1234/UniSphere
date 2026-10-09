@@ -37,21 +37,41 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
   const [reviewModalLeave, setReviewModalLeave] = useState<ClassLeaveRequest | null>(null);
   const [adminRemark, setAdminRemark] = useState('');
 
+  // Dynamic local date calculation (never hardcoded)
+  const getTodayLocalDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getTodayLocalDate();
+
   // Form states
-  const [leaveDate, setLeaveDate] = useState('2026-10-08');
+  const [leaveDate, setLeaveDate] = useState(todayStr);
   const [period, setPeriod] = useState('Periods 1 & 2 (09:00 AM - 11:00 AM)');
   const [reason, setReason] = useState<ClassLeaveRequest['reason']>('Campus Drive');
   const [note, setNote] = useState('');
+  const [dateError, setDateError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState(false);
 
-  const scopedLeaves = userRole === 'admin' ? leaves : leaves.filter((l) => l.studentId === student.id);
-  const filteredLeaves = scopedLeaves.filter((l) => {
+  const filteredLeaves = leaves.filter((l) => {
     if (selectedFilter !== 'All' && l.status !== selectedFilter) return false;
     return true;
   });
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const currentToday = getTodayLocalDate();
+
+    // Prevent selecting or submitting leave dates in the past
+    if (!leaveDate || leaveDate < currentToday) {
+      setDateError(`Invalid leave date: ${leaveDate || 'Empty'}. Leave requests cannot be applied for past dates. Please select today (${currentToday}) or a future date.`);
+      return;
+    }
+
+    setDateError(null);
     onApplyLeave({
       studentId: student.id,
       studentName: student.name,
@@ -66,6 +86,7 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
       setFormSuccess(false);
       setShowApplyModal(false);
       setNote('');
+      setDateError(null);
     }, 900);
   };
 
@@ -76,8 +97,8 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
     setAdminRemark('');
   };
 
-  const pendingCount = scopedLeaves.filter((l) => l.status === 'Pending').length;
-  const approvedCount = scopedLeaves.filter((l) => l.status === 'Approved').length;
+  const pendingCount = leaves.filter((l) => l.status === 'Pending').length;
+  const approvedCount = leaves.filter((l) => l.status === 'Approved').length;
 
   return (
     <div className="space-y-6">
@@ -306,10 +327,19 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
                   <input
                     type="date"
                     required
+                    min={getTodayLocalDate()}
                     value={leaveDate}
-                    onChange={(e) => setLeaveDate(e.target.value)}
+                    onChange={(e) => {
+                      setLeaveDate(e.target.value);
+                      if (e.target.value >= getTodayLocalDate()) {
+                        setDateError(null);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-1 focus:ring-teal-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Must be today or a future date
+                  </span>
                 </div>
               </div>
 
@@ -367,6 +397,13 @@ export const ClassLeaveView: React.FC<ClassLeaveViewProps> = ({
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-slate-800 focus:ring-1 focus:ring-teal-500"
                 />
               </div>
+
+              {dateError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg font-semibold text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{dateError}</span>
+                </div>
+              )}
 
               {formSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-semibold flex items-center gap-2">

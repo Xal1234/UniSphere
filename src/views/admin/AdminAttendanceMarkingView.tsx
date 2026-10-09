@@ -11,12 +11,12 @@ import {
   Send,
   Users,
   Search,
-  Edit3,
   Calendar,
   Clock,
   History,
   ShieldAlert,
   Info,
+  Lock,
 } from 'lucide-react';
 import { FacultyCourse, StudentRecord, ClassAttendanceRecord } from '../../types';
 
@@ -24,7 +24,7 @@ interface AdminAttendanceMarkingViewProps {
   courses: FacultyCourse[];
   students: StudentRecord[];
   attendanceRecords: ClassAttendanceRecord[];
-  onSaveAttendanceRecord?: (record: ClassAttendanceRecord, isCorrection: boolean) => void;
+  onSaveAttendanceRecord?: (record: ClassAttendanceRecord) => void;
   adminName?: string;
 }
 
@@ -35,15 +35,28 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
   onSaveAttendanceRecord,
   adminName = 'Dr. Sudhir Kumar Mohanty',
 }) => {
+  // Dynamic local date calculation (never hardcoded)
+  const getLocalDateString = (offsetDays = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateString(0);
+  const yesterdayStr = getLocalDateString(-1);
+  const tomorrowStr = getLocalDateString(1);
+
   const [selectedCourse, setSelectedCourse] = useState<string>(courses[0]?.code || 'RCS6C001');
-  const [sessionDate, setSessionDate] = useState<string>('2026-10-01');
+  const [sessionDate, setSessionDate] = useState<string>(todayStr);
   const [sessionPeriod, setSessionPeriod] = useState<string>('Period 1 (09:00 AM - 10:00 AM)');
   const [threshold, setThreshold] = useState<number>(75);
   const [searchStudent, setSearchStudent] = useState<string>('');
-  const [isEditingCorrection, setIsEditingCorrection] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
 
-  // Find if an existing attendance record exists for this specific Course + Date + Period
+  // Find if an existing attendance record exists for this specific Course + Calendar Date + Period
   const existingRecord = attendanceRecords.find(
     (r) =>
       r.courseCode === selectedCourse &&
@@ -51,7 +64,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
       r.sessionPeriod === sessionPeriod
   );
 
-  const isAlreadySaved = Boolean(existingRecord);
+  const isLocked = Boolean(existingRecord);
 
   // Initialize attendance state based on existing record or student directory
   const [attendanceState, setAttendanceState] = useState<Record<string, boolean>>(() => {
@@ -64,7 +77,6 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
 
   // Whenever course, date, or period changes, load the matching record if it exists
   useEffect(() => {
-    setIsEditingCorrection(false);
     if (existingRecord) {
       const stateFromRecord: Record<string, boolean> = {};
       students.forEach((s) => {
@@ -72,7 +84,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
       });
       setAttendanceState(stateFromRecord);
     } else {
-      // Default roster attendance
+      // Default roster attendance for unlocked session
       const freshState: Record<string, boolean> = {};
       students.forEach((s) => {
         freshState[s.id] = s.attendancePct >= 75;
@@ -82,11 +94,10 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
   }, [selectedCourse, sessionDate, sessionPeriod, existingRecord, students]);
 
   const toggleStudent = (id: string) => {
-    // Only allow toggling if it's a new session OR if we are in active correction mode
-    if (isAlreadySaved && !isEditingCorrection) {
+    if (isLocked) {
       setFeedbackMessage({
         type: 'info',
-        text: 'This session is already saved. Click "Edit Saved Attendance" to make changes.',
+        text: `Attendance for ${selectedCourse} on ${sessionDate} (${sessionPeriod}) is already submitted and locked for this calendar day.`,
       });
       return;
     }
@@ -94,10 +105,10 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
   };
 
   const markAll = (present: boolean) => {
-    if (isAlreadySaved && !isEditingCorrection) {
+    if (isLocked) {
       setFeedbackMessage({
         type: 'info',
-        text: 'This session is already saved. Click "Edit Saved Attendance" to unlock editing.',
+        text: `Attendance for this session is locked because it was already submitted today. It cannot be edited or counted twice.`,
       });
       return;
     }
@@ -110,6 +121,15 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
 
   const handleSaveSession = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent duplicate submission: allow attendance to be submitted only once per class/session on each calendar day
+    if (isLocked) {
+      setFeedbackMessage({
+        type: 'info',
+        text: `Attendance for this session is locked. It has already been submitted for ${sessionDate} and cannot be submitted again or counted twice.`,
+      });
+      return;
+    }
 
     const presentIds = Object.keys(attendanceState).filter((id) => attendanceState[id]);
     const absentIds = Object.keys(attendanceState).filter((id) => !attendanceState[id]);
@@ -125,31 +145,25 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
       sessionDate,
       sessionPeriod,
       markedBy: adminName,
-      markedAt: existingRecord ? existingRecord.markedAt : nowStr,
-      lastEditedAt: isAlreadySaved ? nowStr : undefined,
+      markedAt: nowStr,
       presentStudentIds: presentIds,
       absentStudentIds: absentIds,
       totalEnrolled: students.length,
-      remarks: isAlreadySaved
-        ? `Attendance corrected on ${nowStr} by ${adminName}.`
-        : `Class session recorded on ${nowStr} by ${adminName}.`,
+      remarks: `Official class session attendance submitted and locked on ${nowStr} by ${adminName}.`,
     };
 
     if (onSaveAttendanceRecord) {
-      onSaveAttendanceRecord(record, isAlreadySaved);
+      onSaveAttendanceRecord(record);
     }
 
-    setIsEditingCorrection(false);
     setFeedbackMessage({
       type: 'success',
-      text: isAlreadySaved
-        ? `Attendance record successfully updated for ${sessionDate} (${presentIds.length} present, ${absentIds.length} absent). No duplicate record was created.`
-        : `Attendance session successfully logged for ${sessionDate} (${presentIds.length} present, ${absentIds.length} absent).`,
+      text: `Attendance session successfully submitted and locked for ${sessionDate} (${presentIds.length} present, ${absentIds.length} absent). Next day's attendance can be recorded normally.`,
     });
 
     setTimeout(() => {
       setFeedbackMessage(null);
-    }, 4500);
+    }, 5000);
   };
 
   const currentCourseObj = courses.find((c) => c.code === selectedCourse) || courses[0];
@@ -185,7 +199,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
             Record Class Attendance & Monitor Defaulters
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Real-time biometric & faculty validation synchronized with BPUT examination seating engine
+            Attendance may be submitted only once per class/session on each calendar day and is locked immediately upon submission.
           </p>
         </div>
 
@@ -260,13 +274,11 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1 flex items-center justify-between">
                   <span>Class Date</span>
-                  <span className="text-[10px] text-teal-700 font-normal lowercase">(any term date)</span>
+                  <span className="text-[10px] text-teal-700 font-normal lowercase">(calendar day)</span>
                 </label>
                 <input
                   type="date"
                   required
-                  min="2026-08-01"
-                  max="2026-11-30"
                   value={sessionDate}
                   onChange={(e) => setSessionDate(e.target.value)}
                   className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-mono focus:ring-1 focus:ring-teal-500"
@@ -296,14 +308,16 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                 <div className="text-xs font-bold text-slate-900 font-mono tabular-nums">
                   {presentCount} / {totalCount} Present ({currentSessionPct}%)
                 </div>
-                <div className="text-[10px] text-slate-400">Class Roll Call Session</div>
+                <div className="text-[10px] text-slate-400">
+                  {isLocked ? 'Locked Session Status' : 'Class Roll Call Session'}
+                </div>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => markAll(true)}
-                  disabled={isAlreadySaved && !isEditingCorrection}
+                  disabled={isLocked}
                   className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   All Present
@@ -311,7 +325,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                 <button
                   type="button"
                   onClick={() => markAll(false)}
-                  disabled={isAlreadySaved && !isEditingCorrection}
+                  disabled={isLocked}
                   className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   All Absent
@@ -322,13 +336,13 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
 
           {/* Quick Date Shortcuts */}
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200/80 text-[11px] text-slate-500">
-            <span className="font-semibold text-slate-600">Quick Term Class Dates:</span>
+            <span className="font-semibold text-slate-600">Quick Calendar Dates:</span>
             {[
-              { label: 'Today (Oct 1)', date: '2026-10-01' },
+              { label: 'Today', date: todayStr },
+              { label: 'Next Day', date: tomorrowStr },
+              { label: 'Yesterday', date: yesterdayStr },
               { label: 'Sep 30', date: '2026-09-30' },
               { label: 'Sep 28', date: '2026-09-28' },
-              { label: 'Sep 25', date: '2026-09-25' },
-              { label: 'Sep 24', date: '2026-09-24' },
             ].map((d) => {
               const isSelected = sessionDate === d.date;
               const hasRec = attendanceRecords.some((r) => r.courseCode === selectedCourse && r.sessionDate === d.date);
@@ -337,7 +351,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                   key={d.date}
                   type="button"
                   onClick={() => setSessionDate(d.date)}
-                  className={`px-2 py-0.5 rounded font-mono transition-colors flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded font-mono transition-colors flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-teal-600 text-white font-bold'
                       : hasRec
@@ -346,82 +360,38 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                   }`}
                 >
                   <span>{d.label}</span>
-                  {hasRec && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" title="Recorded session exists" />}
+                  {hasRec && (
+                    <span title="Attendance locked for this session">
+                      <Lock className="w-3 h-3 text-teal-700" />
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Existing Record Status or Correction Notification Banner */}
-        {isAlreadySaved && (
-          <div
-            className={`p-3.5 px-5 border-b text-xs flex flex-wrap items-center justify-between gap-3 ${
-              isEditingCorrection
-                ? 'bg-amber-50/90 border-amber-300 text-amber-900'
-                : 'bg-teal-50/80 border-teal-200 text-teal-900'
-            }`}
-          >
+        {/* Locked Session Banner (No Edit Option) */}
+        {isLocked && (
+          <div className="p-3.5 px-5 border-b text-xs flex flex-wrap items-center justify-between gap-3 bg-teal-50/90 border-teal-200 text-teal-950">
             <div className="flex items-start sm:items-center gap-2.5">
-              {isEditingCorrection ? (
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0 mt-0.5 sm:mt-0" />
-              )}
+              <Lock className="w-4 h-4 text-teal-700 shrink-0 mt-0.5 sm:mt-0" />
               <div>
-                <div className="font-bold">
-                  {isEditingCorrection
-                    ? 'Attendance Correction Mode Active'
-                    : 'Attendance Already Recorded for this Date & Slot'}
+                <div className="font-bold flex items-center gap-2">
+                  <span>Attendance Locked for this Calendar Day</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-teal-200 text-teal-900 border border-teal-300">
+                    Locked
+                  </span>
                 </div>
-                <div className="text-[11px] opacity-90">
-                  {isEditingCorrection ? (
-                    <span>
-                      Modifying attendance for <strong>{sessionDate} ({sessionPeriod})</strong>. Saving will update the verified record without creating duplicate entries.
-                    </span>
-                  ) : (
-                    <span>
-                      Recorded on {existingRecord?.markedAt} by {existingRecord?.markedBy}. Recorded status: <strong>{existingRecord?.presentStudentIds.length} Present</strong>,{' '}
-                      <strong>{existingRecord?.absentStudentIds.length} Absent</strong>.
-                      {existingRecord?.lastEditedAt && (
-                        <span className="italic ml-1">(Last edited: {existingRecord.lastEditedAt})</span>
-                      )}
-                    </span>
-                  )}
+                <div className="text-[11px] text-teal-800 mt-0.5">
+                  Attendance was submitted on {existingRecord?.markedAt} by {existingRecord?.markedBy}. Per university regulations, attendance can only be submitted once per class/session on each calendar day and cannot be modified or counted twice. Recorded status: <strong>{existingRecord?.presentStudentIds.length} Present</strong>, <strong>{existingRecord?.absentStudentIds.length} Absent</strong>.
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {!isEditingCorrection ? (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingCorrection(true)}
-                  className="px-3 py-1.5 bg-white border border-teal-300 text-teal-800 hover:bg-teal-100 rounded-lg font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Edit Saved Attendance
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingCorrection(false);
-                    // Revert to saved record state
-                    if (existingRecord) {
-                      const reverted: Record<string, boolean> = {};
-                      students.forEach((s) => {
-                        reverted[s.id] = existingRecord.presentStudentIds.includes(s.id);
-                      });
-                      setAttendanceState(reverted);
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 rounded-lg font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Cancel Correction
-                </button>
-              )}
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-teal-800 bg-white/80 px-2.5 py-1 rounded-md border border-teal-200">
+              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+              <span>Record is Permanent</span>
             </div>
           </div>
         )}
@@ -448,55 +418,43 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">Student Particulars</th>
-                <th className="py-3 px-4">Branch & Semester</th>
-                <th className="py-3 px-4 text-center">Aggregate Attendance</th>
-                <th className="py-3 px-4 text-center">BPUT Standing</th>
-                <th className="py-3 px-4 text-center">
-                  Session Attendance Status
-                  {isAlreadySaved && !isEditingCorrection && (
-                    <span className="block text-[10px] font-normal text-slate-400 lowercase">(read-only until edit clicked)</span>
-                  )}
-                </th>
+                <th className="py-3 px-4">Roll No / Student</th>
+                <th className="py-3 px-4">Reg No</th>
+                <th className="py-3 px-4">Branch & Sem</th>
+                <th className="py-3 px-4 text-center">Cumulative %</th>
+                <th className="py-3 px-4 text-center">Debarment Status</th>
+                <th className="py-3 px-4 text-center">Session Attendance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredStudents.map((s) => {
-                const isPresent = attendanceState[s.id] ?? true;
+                const isPresent = Boolean(attendanceState[s.id]);
                 const isDefaulter = s.attendancePct < threshold;
 
                 return (
                   <tr
                     key={s.id}
-                    className={`hover:bg-slate-50/80 transition-colors ${
-                      isDefaulter ? 'bg-amber-50/20' : ''
+                    className={`hover:bg-slate-50/60 transition-colors ${
+                      isDefaulter ? 'bg-rose-50/20' : ''
                     }`}
                   >
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{s.name}</div>
-                      <div className="text-[11px] font-mono text-slate-500">
-                        Roll: {s.rollNo} · Reg: {s.regNo}
-                      </div>
+                      <div className="font-semibold text-slate-900">{s.name}</div>
+                      <div className="text-[11px] font-mono text-slate-400">{s.rollNo}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700">
-                      {s.branch} · {s.semester}
+                    <td className="py-3.5 px-4 font-mono text-slate-600">{s.regNo}</td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      <div>{s.branch}</div>
+                      <div className="text-[11px] text-slate-400">{s.semester}</div>
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
-                        className={`font-mono font-bold tabular-nums text-xs ${
-                          isDefaulter ? 'text-amber-700' : 'text-slate-900'
+                        className={`font-mono font-bold ${
+                          isDefaulter ? 'text-rose-600' : 'text-slate-800'
                         }`}
                       >
                         {s.attendancePct}%
                       </span>
-                      <div className="w-16 mx-auto bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                        <div
-                          className={`h-full rounded-full ${
-                            isDefaulter ? 'bg-amber-500' : 'bg-teal-600'
-                          }`}
-                          style={{ width: `${Math.min(s.attendancePct, 100)}%` }}
-                        />
-                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       {isDefaulter ? (
@@ -515,12 +473,12 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                       <button
                         type="button"
                         onClick={() => toggleStudent(s.id)}
-                        disabled={isAlreadySaved && !isEditingCorrection}
+                        disabled={isLocked}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
                           isPresent
                             ? 'bg-emerald-600 text-white shadow-xs'
                             : 'bg-rose-100 text-rose-800 border border-rose-200 hover:bg-rose-200'
-                        } ${isAlreadySaved && !isEditingCorrection ? 'opacity-85 cursor-default' : 'cursor-pointer hover:scale-[1.02]'}`}
+                        } ${isLocked ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.02]'}`}
                       >
                         {isPresent ? (
                           <>
@@ -545,56 +503,40 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
         {/* Footer submission action */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500">
-            {isAlreadySaved && !isEditingCorrection ? (
-              <span className="text-teal-800 font-semibold flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                This session was saved previously. Click "Edit Saved Attendance" to apply corrections.
-              </span>
-            ) : isEditingCorrection ? (
-              <span className="text-amber-800 font-semibold flex items-center gap-1.5">
-                <Edit3 className="w-4 h-4 text-amber-600" />
-                Ready to save attendance corrections for {sessionDate}.
+            {isLocked ? (
+              <span className="text-teal-900 font-semibold flex items-center gap-1.5">
+                <Lock className="w-4 h-4 text-teal-700" />
+                This class session's attendance is locked for {sessionDate}. It cannot be submitted again or counted twice.
               </span>
             ) : (
-              <span>Submitting registers this session to university centralized student records.</span>
+              <span>Submitting registers and permanently locks this session's attendance for {sessionDate}.</span>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            {isAlreadySaved && !isEditingCorrection ? (
+            {isLocked ? (
               <button
                 type="button"
-                onClick={() => setIsEditingCorrection(true)}
-                className="px-5 py-2 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                disabled
+                className="px-5 py-2 text-xs font-semibold rounded-lg bg-slate-200 text-slate-500 cursor-not-allowed flex items-center gap-1.5"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                Edit Saved Attendance
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                Attendance Locked (Already Submitted)
               </button>
             ) : (
               <button
                 type="submit"
-                className={`px-5 py-2 text-xs font-semibold rounded-lg text-white transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  isEditingCorrection ? 'bg-amber-600 hover:bg-amber-700' : 'bg-teal-600 hover:bg-teal-700'
-                }`}
+                className="px-5 py-2 text-xs font-semibold rounded-lg text-white bg-teal-600 hover:bg-teal-700 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                {isEditingCorrection ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    Save Attendance Corrections ({presentCount} Present)
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    Submit Attendance Session ({presentCount} Present)
-                  </>
-                )}
+                <Send className="w-3.5 h-3.5" />
+                Submit Attendance Session ({presentCount} Present)
               </button>
             )}
           </div>
         </div>
       </form>
 
-      {/* 3. Recorded Sessions Ledger (Shows separate attendance records for different dates & sessions) */}
+      {/* 3. Recorded Sessions Ledger (Shows unique attendance records) */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -604,7 +546,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
             </h3>
           </div>
           <span className="text-xs text-slate-500 font-mono">
-            {courseRecords.length} sessions logged
+            {courseRecords.length} unique daily sessions logged
           </span>
         </div>
 
@@ -617,8 +559,8 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                   <th className="py-2.5 px-4">Period / Slot</th>
                   <th className="py-2.5 px-4 text-center">Attendance Ratio</th>
                   <th className="py-2.5 px-4">Faculty In-Charge</th>
-                  <th className="py-2.5 px-4">Recorded / Modified</th>
-                  <th className="py-2.5 px-4 text-right">Actions</th>
+                  <th className="py-2.5 px-4">Recorded Timestamp</th>
+                  <th className="py-2.5 px-4 text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -639,7 +581,7 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                         <span>{rec.sessionDate}</span>
                         {isCurrent && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-100 text-teal-800 font-sans font-semibold">
-                            Active
+                            Viewing
                           </span>
                         )}
                       </td>
@@ -652,27 +594,13 @@ export const AdminAttendanceMarkingView: React.FC<AdminAttendanceMarkingViewProp
                       </td>
                       <td className="py-3 px-4 text-slate-600">{rec.markedBy}</td>
                       <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
-                        {rec.lastEditedAt ? (
-                          <span title={`Initial: ${rec.markedAt}`}>
-                            Edited: {rec.lastEditedAt}
-                          </span>
-                        ) : (
-                          <span>{rec.markedAt}</span>
-                        )}
+                        {rec.markedAt}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSessionDate(rec.sessionDate);
-                            setSessionPeriod(rec.sessionPeriod);
-                            setIsEditingCorrection(true);
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-700 text-slate-700 border border-slate-200 transition-colors inline-flex items-center gap-1"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                          <span>Open & Edit</span>
-                        </button>
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200 inline-flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          <span>Locked</span>
+                        </span>
                       </td>
                     </tr>
                   );
